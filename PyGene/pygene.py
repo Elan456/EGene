@@ -90,8 +90,8 @@ def custom_eval(t):
 
 
 class Species:
-    def __init__(self, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
-                 initalweights=None, draw_window=False, layer=1, datapergen=None, shape=None, metapop=0,
+    def __init__(self, shape, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
+                 initalweights=None, draw_window=False, layer=1, datapergen=None, metapop=0,
                  use_sigmoid=True, can_change_changerate=True, use_multiprocessing=True, set_all_zero=False):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
@@ -103,8 +103,9 @@ class Species:
         self.all_blost = []  # All the lowest losses for each epoch
 
         self.metapop = metapop
+
         if scorefunction == None and train_inputs == None:
-            raise CustomError("Species needs either a list of inputs + outputs or a scorefunction")
+            raise CustomError("Species needs either a list of inputs and outputs or a scorefunction")
         if scorefunction == None:
             self.n_inputs = len(train_inputs[0])
             self.n_outputs = len(train_outputs[0])
@@ -115,21 +116,18 @@ class Species:
             self.scorefunction = scorefunction
             self.using_custom_score_function = True
 
-        if shape == None:
-            self.shape = [self.n_inputs + 1,  # plus 1 for bias
-                          self.n_inputs * 2,
+        self.shape = shape  # This does not include the bias nodes which are added to every non-output layer
 
-                          self.n_outputs]
-        else:
-            self.shape = shape
         if not self.using_custom_score_function:
-            if self.shape[0] != self.n_inputs + 1:
-                raise CustomError("First layer node count does not equal inputs number + 1 (the plus 1 is for bias)")
+            if self.shape[0] != self.n_inputs:
+                raise CustomError("First layer node count does not equal inputs number from training data which is:",
+                                  self.n_inputs)
             if self.shape[-1] != self.n_outputs:
-                raise CustomError("Last layer node count does not equal outputs")
+                raise CustomError("Last layer node count does not equal outputs number from training data which is:",
+                                  self.n_outputs)
             if duplicatechecker(train_inputs):
                 print("--Duplicate Inputs Found--")
-            if datapergen == None:
+            if datapergen is None:
                 datapergen = len(train_inputs)
             self.datapergen = min(len(train_inputs), datapergen)
         else:
@@ -184,6 +182,7 @@ class Species:
         return loss
 
     def supereval(self, agent):  # Will test the network after 10 generations of changes
+        print("Supereval is being used, this does not work so it should be being used ever")
         if self.using_custom_score_function:
             sent_score_function = self.scorefunction
         else:
@@ -288,14 +287,14 @@ class Species:
 
         return child
 
-    def mutate(self, agent):
+    def mutate(self, agent):  # Adds some random variation to some weights
         # print("Before mutation:", [w.value for w in agent.w])
         for w in agent.w:
             w.value += random.random() * random.choice([-1, 0, 0, 0, 1]) * self.changerate
         # print("After  mutation:", [w.value for w in agent.w])
         return agent
 
-    def nextgen(self):  # Gives all of the agents a list of weights similar to the best weight
+    def nextgen(self):  # Crosses over and mutates certain agents
         choices = []
         # print("NEWGEN")
         # print("\n\n")
@@ -333,36 +332,15 @@ class Species:
         # print("Newval:", p.w[j].value)
         # print(int(len(self.agents)*(15/16)))
 
-        for p in range(int(len(self.agents) * (15 / 16)), len(self.agents)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
+        for p in range(int(len(self.agents) * (15 / 16)),
+                       len(self.agents)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
             p1 = self.agents[random.randint(0, max_index)]
             w_index = random.randint(0, len(self.agents[0].w) - 1)
             # for i, v in enumerate(self.agents[p].w):
             self.agents[p].w = copy.deepcopy(p1.w)
-            self.agents[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.changerate + p1.w[w_index].value
-            # print("p1 stuff:", [w.value for w in p1.w])
-            # print("ne stuff:", [w.value for w in self.agents[p].w])
-        # print("randomized:",n)
+            self.agents[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.changerate + p1.w[
+                w_index].value
 
-        # print("bestweights", best_weights)
-        # for p in self.agents:
-        #     # print("old", p.show())
-        #     if p.w != best_weights:
-        #         new_weights = []
-        #         choice = random.choice(choices)
-        #         if choice == "randomnew":
-        #             #print("rand")
-        #             for v in p.w:
-        #                 v.value = random.choice([-1, 1]) * round(random.random(), 2)
-        #             # print(new_weights)
-        #         elif choice == "smallchange":
-        #             # print("small")
-        #             for v in range(len(p.w)):
-        #                 # print(v)
-        #                 p.w[v].value = best_weights[v].value + (
-        #                             random.random() * random.choice([-1, 1]) * self.changerate)
-        # else:
-        #     print("BEST")
-        # print("new", p.show())
 
     def train(self, epochs, show_pop=False):
 
@@ -379,17 +357,11 @@ class Species:
 
             blost = self.agents[0].loss  # blost is the lost of the best agent in this epoch
             if self.layer == 1:
-                # if blost <= self.lowestlost:  # lowestlost is the lowestlost ever
-                #     if len(self.all_blost) > 6 and abs(
-                #             blost - all_blost[v - 5]) < self.changerate / 100 and self.can_change_changerate:
-                #         pass
-                #         # print("CONVERGED", "changerate:", self.changerate)
-                #         # break
-                #     lowestlost = blost
                 self.all_blost.append(self.agents[0].loss)
                 print(self.epochs, ":", "loss:", self.agents[0].loss, self.agents[0].show())
                 # print("-2:", all_blost[v-2], "v:", all_blost[v])
-                if len(self.all_blost) > 2 and self.all_blost[self.epochs - 2] == self.all_blost[self.epochs] and self.can_change_changerate:
+                if len(self.all_blost) > 2 and self.all_blost[self.epochs - 2] == self.all_blost[
+                    self.epochs] and self.can_change_changerate:
                     self.changerate /= 2
                     print("--\nNo change from 2 gens ago so changerate is being lowered to", self.changerate, "\n--")
 
@@ -450,7 +422,8 @@ class Agent:
         for n in self.nodes:
             if n.layer != len(layer_starts) - 2:
                 # print(layer_starts[n.layer+1],"to", layer_starts[n.layer+2])
-                for target_index in range(layer_starts[n.layer + 1], layer_starts[n.layer + 2]):  # All nodes ahead in index are checked
+                for target_index in range(layer_starts[n.layer + 1],
+                                          layer_starts[n.layer + 2]):  # All nodes ahead in index are checked
                     things_checked += 1
                     t = self.nodes[target_index]
                     if t.layer == n.layer + 1:  # If the target node is one layer ahead of the current node
