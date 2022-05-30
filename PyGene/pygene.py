@@ -590,7 +590,8 @@ class Agent:
             a.append(v.value)
         return a
 
-    def draw(self, surface):
+    def draw(self, size=500):
+        surface = pygame.Surface((500, 500))
         surface.fill(black)
         largest_weight = max([abs(v.value) for v in self.w])
         # print("Largest weight:", largest_weight, "list of weights:", self.show())
@@ -599,4 +600,6 @@ class Agent:
             p.draw(round((abs(p.value) / largest_weight) * self.node_draw_size * .3, 0), surface, self.node_draw_size)
         for n in self.nodes:
             n.draw(surface)
+        if size != 500:
+            surface = pygame.transform.scale(surface, (size, size))
         return surface
