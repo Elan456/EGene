@@ -1,0 +1,9 @@
+.idea/
+PyGene/.idea/
+PyGene/__pycache__/
+__pycache__/
+main.py
+tictactoeobject
+tictactry.py
+train.csv
+venv/
