@@ -184,34 +184,6 @@ class Species:
         # print("Desired Output:", output, "Output reciceved", gen_output, "loss", self.loss)
         return loss
 
-    def supereval(self, agent):  # Will test the network after 10 generations of changes
-        print("Supereval is being used, this does not work so it should be being used ever")
-        if self.using_custom_score_function:
-            sent_score_function = self.scorefunction
-        else:
-            sent_score_function = None
-        metaspecies = Species(.1, layer=self.layer + 1, popsize=self.metapop, train_inputs=self.train_inputs,
-                              train_outputs=self.train_outputs,
-                              initalweights=agent.show(), datapergen=self.datapergen, shape=self.shape,
-                              scorefunction=sent_score_function,
-                              use_sigmoid=self.use_sigmoid)  # extra layer to keep track of recursion depth
-        # print("\n\nEntering metalayer\n\n")
-        metaspecies.train(10, 10)
-        # print("\n\nExiting metalayer\n\n")
-        # print("premeta:")
-        # self.evaluate(train_inputs, train_outputs)
-        # print(self.loss, self.w)
-        # print("metabest:")
-        # print(metaspecies.agents[0].loss, metaspecies.agents[0].w)
-        # print()
-        for v in range(len(agent.w)):
-            agent.w[v].value = metaspecies.agents[0].w[v].value
-
-        # print("\nMETAW:")
-        metaspecies.agents[0].show()
-        agent.loss = metaspecies.agents[0].loss
-        return agent
-
     def scoreall(self, show, scorefunction):  # Evaluates all of the agents and puts them in order from best to worst
         # print("SCORE")
         # MUST PICK WHICH INPUTS AND OUTPUTS WILL BE USED FOR EVALUATION
