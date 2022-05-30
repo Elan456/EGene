@@ -92,9 +92,8 @@ def custom_eval(t):
 
 class Species:
     def __init__(self, shape, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
-                 initalweights=None, draw_window=False, layer=1, datapergen=None, metapop=0,
-                 use_sigmoid=True, can_change_changerate=True, use_multiprocessing=True, set_all_zero=False,
-                 add_bias_nodes=True):
+                 initial_weights=None, datapergen=None, use_sigmoid=True, can_change_changerate=True,
+                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
         self.can_change_changerate = can_change_changerate
@@ -104,8 +103,6 @@ class Species:
         self.epochs = 0  # Count of all epochs every trained on this species
         self.lowestlost = float("inf")
         self.all_blost = []  # All the lowest losses for each epoch
-
-        self.metapop = metapop
 
         if scorefunction == None and train_inputs == None:
             raise CustomError("Species needs either a list of inputs and outputs or a scorefunction")
@@ -137,9 +134,7 @@ class Species:
             # print("Datepergen set to None because self.using_custom... is", self.using_custom_score_function)
             self.datapergen = None
 
-        self.layer = layer
-        self.draw_window = draw_window
-        self.initalweights = initalweights
+        self.initalweights = initial_weights
 
         # print("datagennum:", self.datapergen)
 
@@ -151,7 +146,7 @@ class Species:
         self.agents = []
 
         for p in range(popsize):  # Creating first generation of agents
-            self.agents.append(Agent(self.shape, draw_window, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
+            self.agents.append(Agent(self.shape, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
         print("--First agents made")
         # INITAL WEIGHTS
         if self.initalweights is not None and self.set_all_zero is False:
@@ -206,9 +201,6 @@ class Species:
             # print("SECTIONS CREATED\n")
 
             if self.use_multiprocessing:
-                jobs = []
-                # print("JOBS LIST MADE")
-                j = 0
                 data = []
                 p = Pool()
                 for a in self.agents:
@@ -225,24 +217,14 @@ class Species:
                     self.agents[a].loss = self.scorefunction(self.agents[a])
 
         else:
-            # print("ins", ins, "outs:", outs)
 
             for p in self.agents:
                 p.loss = scorefunction(p, ins, outs)
 
-                if self.layer <= 1 and self.metapop != 0:
-                    p = self.supereval(p)
-
         self.agents.sort(key=lambda x: x.loss)
-        # for p in self.agents:
-        #     print(p.loss, p.show())
-        # if show and self.layer == 1:
-        #     print(self.agents[0].loss, self.agents[0].show())
-
-        # time.sleep(.2)
 
     def crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
-        child = Agent(self.shape, self.draw_window, self.use_sigmoid, self.add_bias_nodes)
+        child = Agent(self.shape, self.use_sigmoid, self.add_bias_nodes)
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
@@ -316,29 +298,19 @@ class Species:
             self.agents[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.changerate + p1.w[
                 w_index].value
 
-
     def train(self, epochs, show_pop=False):
 
         for v in range(epochs):
 
-            # print("\n\n Epoch:",v,"\n\n")
-
             self.scoreall(True, self.scorefunction)
 
-            if self.draw_window and self.layer == 1:
-                self.agents[0].draw(gameDisplay)
-
-                # pygame.display.update()
-
-            blost = self.agents[0].loss  # blost is the lost of the best agent in this epoch
-            if self.layer == 1:
-                self.all_blost.append(self.agents[0].loss)
-                print(self.epochs, ":", "loss:", self.agents[0].loss, self.agents[0].show())
-                # print("-2:", all_blost[v-2], "v:", all_blost[v])
-                if len(self.all_blost) > 4 and self.all_blost[self.epochs - 4] == self.all_blost[
-                    self.epochs] and self.can_change_changerate:
-                    self.changerate /= 2
-                    print("--\nNo change from 4 gens ago so changerate is being lowered to", self.changerate, "\n--")
+            self.all_blost.append(self.agents[0].loss)
+            print(self.epochs, ":", "loss:", self.agents[0].loss, self.agents[0].show())
+            # print("-2:", all_blost[v-2], "v:", all_blost[v])
+            if len(self.all_blost) > 4 and self.all_blost[self.epochs - 4] == self.all_blost[
+                self.epochs] and self.can_change_changerate:
+                self.changerate /= 2
+                print("--\nNo change from 4 gens ago so changerate is being lowered to", self.changerate, "\n--")
 
             if show_pop:
                 all_losses = [a.loss for a in self.agents]
@@ -346,20 +318,18 @@ class Species:
             self.epochs += 1
             self.nextgen()
 
-    # def train(self, gencount=100):
     def get_best_agent(self):
         return self.agents[0]
 
 
 class Agent:
-    def __init__(self, shape, draw_window, use_sigmoid, add_bias_nodes, set_all_zero=False):
+    def __init__(self, shape, use_sigmoid, add_bias_nodes, set_all_zero=False):
         self.loss = 0
         self.use_sigmoid = use_sigmoid
-        self.draw_window = draw_window
         self.set_all_zero = set_all_zero
         self.shape = shape
 
-        # Initate nodes ------------
+        # Initiate nodes ------------
         self.nodes = []
         xscale = 500 / (len(self.shape) + 1)
 
@@ -415,18 +385,18 @@ class Agent:
                     t = self.nodes[target_index]
 
                     if t.layer == n.layer + 1:  # If the target node is one layer ahead of the current node
-                        #print("tnode is:", "layer:", t.layer, "node:", t.node)
+                        # print("tnode is:", "layer:", t.layer, "node:", t.node)
 
                         if t.node < self.shape[t.layer]:  # Stops weights from connecting to the bias node,
                             # weights can only connect from the bias node not to bias node.
-                         #   print("Good to conncet to")
+                            #   print("Good to conncet to")
                             if self.set_all_zero is False:
                                 self.w.append(Agent.Wij(random.choice([-1, 1]) * random.random(), n, t))
                             else:
                                 self.w.append(Agent.Wij(0, n, t))
                         else:
                             pass
-                          #  print("A bias node")
+                        #  print("A bias node")
         # print("weights made. T_C:", things_checked,"Time: ", time.time() - timer, "# of weights created:", len(self.w))
         self.w.sort(key=lambda x: x.pnode.layer)
 
@@ -560,8 +530,9 @@ class Agent:
                 pygame.draw.rect(display, white,
                                  [self.location[0] - self.draw_size - 1, self.location[1] - self.draw_size - 1,
                                   self.draw_size, self.draw_size * 2 + 3])
-                pygame.draw.rect(display, self.color, [self.location[0]-self.draw_size, self.location[1]-self.draw_size, self.draw_size, self.draw_size*2+1])
-
+                pygame.draw.rect(display, self.color,
+                                 [self.location[0] - self.draw_size, self.location[1] - self.draw_size, self.draw_size,
+                                  self.draw_size * 2 + 1])
 
     class Wij:  # The connection between nodes with weights
         def __init__(self, value, pnode, tnode):  # Each weight has a value and connects the pnode to the tnode
