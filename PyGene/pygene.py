@@ -18,7 +18,8 @@ white = (255, 255, 255)
 
 colors = {"input": (37, 37, 125),
           "hidden": (100, 0, 0),
-          "output": (0, 150, 0)}
+          "output": (0, 150, 0),
+          "bias": (200, 0, 200)}
 
 
 def draw_line_as_polygon(gameDisplay, startpos, endpos, width,
@@ -92,11 +93,13 @@ def custom_eval(t):
 class Species:
     def __init__(self, shape, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
                  initalweights=None, draw_window=False, layer=1, datapergen=None, metapop=0,
-                 use_sigmoid=True, can_change_changerate=True, use_multiprocessing=True, set_all_zero=False):
+                 use_sigmoid=True, can_change_changerate=True, use_multiprocessing=True, set_all_zero=False,
+                 add_bias_nodes=True):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
         self.can_change_changerate = can_change_changerate
         self.set_all_zero = set_all_zero
+        self.add_bias_nodes = add_bias_nodes
 
         self.epochs = 0  # Count of all epochs every trained on this species
         self.lowestlost = float("inf")
@@ -148,7 +151,7 @@ class Species:
         self.agents = []
 
         for p in range(popsize):  # Creating first generation of agents
-            self.agents.append(Agent(self.shape, draw_window, self.use_sigmoid, self.set_all_zero))
+            self.agents.append(Agent(self.shape, draw_window, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
         print("--First agents made")
         # INITAL WEIGHTS
         if self.initalweights is not None and self.set_all_zero is False:
@@ -267,7 +270,7 @@ class Species:
         # time.sleep(.2)
 
     def crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
-        child = Agent(self.shape, self.draw_window, self.use_sigmoid)
+        child = Agent(self.shape, self.draw_window, self.use_sigmoid, self.add_bias_nodes)
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
@@ -360,10 +363,10 @@ class Species:
                 self.all_blost.append(self.agents[0].loss)
                 print(self.epochs, ":", "loss:", self.agents[0].loss, self.agents[0].show())
                 # print("-2:", all_blost[v-2], "v:", all_blost[v])
-                if len(self.all_blost) > 2 and self.all_blost[self.epochs - 2] == self.all_blost[
+                if len(self.all_blost) > 4 and self.all_blost[self.epochs - 4] == self.all_blost[
                     self.epochs] and self.can_change_changerate:
                     self.changerate /= 2
-                    print("--\nNo change from 2 gens ago so changerate is being lowered to", self.changerate, "\n--")
+                    print("--\nNo change from 4 gens ago so changerate is being lowered to", self.changerate, "\n--")
 
             if show_pop:
                 all_losses = [a.loss for a in self.agents]
@@ -377,7 +380,7 @@ class Species:
 
 
 class Agent:
-    def __init__(self, shape, draw_window, use_sigmoid, set_all_zero=False):
+    def __init__(self, shape, draw_window, use_sigmoid, add_bias_nodes, set_all_zero=False):
         self.loss = 0
         self.use_sigmoid = use_sigmoid
         self.draw_window = draw_window
@@ -394,20 +397,30 @@ class Agent:
         # Determining the radius of the nodes when drawn so they all fit
         self.node_draw_size = min(int(450 / max(self.shape) / 2.2), int(xscale / 10))
         # print("creating nodes")
+
+        # Node Creation
         for l in range(len(self.shape)):  # Each layer
             layer_starts.append(len(self.nodes))
             x = int(l * xscale + xstart)
-            layersize = self.shape[l]
-            for n in range(self.shape[l]):  # Each node in the layer:
-                yscale = 500 / (layersize + 1)
-                y = int(n * yscale + yscale)
-                if l == 0:
-                    type = "input"
-                elif l == len(self.shape) - 1:
-                    type = "output"
-                else:
-                    type = "hidden"
-                self.nodes.append(Agent.Node(type, (x, y), l, n, self.use_sigmoid, self.node_draw_size))
+
+            if add_bias_nodes and l != len(self.shape) - 1:  # Prevents bias on output layer
+                layersize = self.shape[l] + 1  # +1 for bias
+            else:
+                layersize = self.shape[l]
+            for n in range(layersize):  # Each node in the layer +1 for bias:
+                if not (n == self.shape[l] and l == len(self.shape) - 1):  # Prevents bias on output layer
+                    yscale = 500 / (layersize + 1)
+                    y = int(n * yscale + yscale)
+                    if l == 0:
+                        type = "input"
+                    elif l == len(self.shape) - 1:
+                        type = "output"
+                    else:
+                        type = "hidden"
+
+                    if n == self.shape[l]:
+                        type = "bias"  # Overrides other types
+                    self.nodes.append(Agent.Node(type, (x, y), l, n, self.use_sigmoid, self.node_draw_size))
 
         layer_starts.append(len(self.nodes))
         # print("nodes made")
@@ -417,6 +430,8 @@ class Agent:
         # Initate weights
         # print("creating weigths")
         timer = time.time()
+
+        # Initalizing all the weights
         things_checked = 0
         self.w = []
         for n in self.nodes:
@@ -426,13 +441,21 @@ class Agent:
                                           layer_starts[n.layer + 2]):  # All nodes ahead in index are checked
                     things_checked += 1
                     t = self.nodes[target_index]
-                    if t.layer == n.layer + 1:  # If the target node is one layer ahead of the current node
-                        if self.set_all_zero is False:
-                            self.w.append(Agent.Wij(random.choice([-1, 1]) * random.random(), n, t))
-                        else:
-                            self.w.append(Agent.Wij(0, n, t))
-        # print("weights made. T_C:", things_checked,"Time: ", time.time() - timer, "# of weights created:", len(self.w))
 
+                    if t.layer == n.layer + 1:  # If the target node is one layer ahead of the current node
+                        #print("tnode is:", "layer:", t.layer, "node:", t.node)
+
+                        if t.node < self.shape[t.layer]:  # Stops weights from connecting to the bias node,
+                            # weights can only connect from the bias node not to bias node.
+                         #   print("Good to conncet to")
+                            if self.set_all_zero is False:
+                                self.w.append(Agent.Wij(random.choice([-1, 1]) * random.random(), n, t))
+                            else:
+                                self.w.append(Agent.Wij(0, n, t))
+                        else:
+                            pass
+                          #  print("A bias node")
+        # print("weights made. T_C:", things_checked,"Time: ", time.time() - timer, "# of weights created:", len(self.w))
         self.w.sort(key=lambda x: x.pnode.layer)
 
         # print(self.shape)
@@ -448,7 +471,7 @@ class Agent:
             n.value = 0
 
             if n.layer == 0:  # If it is on the input layer
-                if n.node == self.shape[0] - 1:  # Checks if the node is the bias node
+                if n.node == self.shape[0]:  # Checks if the node is the bias node
                     n.value = 1
                     # print("bias node:", n.node)
                 else:
@@ -461,6 +484,8 @@ class Agent:
                 if n.layer == l:
                     # print(n.layer,"Activated")
                     n.value = n.activation_function(n.value)
+                if n.type == "bias":
+                    n.value = 1
             for v in self.w:
                 if v.pnode.layer == l:
                     v.tnode.value += v.pnode.value * v.value
@@ -559,6 +584,12 @@ class Agent:
             gfxdraw.filled_circle(display, self.location[0], self.location[1], self.draw_size + 1, white)
             gfxdraw.aacircle(display, self.location[0], self.location[1], self.draw_size, self.color)
             gfxdraw.filled_circle(display, self.location[0], self.location[1], self.draw_size, self.color)
+            if self.type == "bias":
+                pygame.draw.rect(display, white,
+                                 [self.location[0] - self.draw_size - 1, self.location[1] - self.draw_size - 1,
+                                  self.draw_size, self.draw_size * 2 + 3])
+                pygame.draw.rect(display, self.color, [self.location[0]-self.draw_size, self.location[1]-self.draw_size, self.draw_size, self.draw_size*2+1])
+
 
     class Wij:  # The connection between nodes with weights
         def __init__(self, value, pnode, tnode):  # Each weight has a value and connects the pnode to the tnode
