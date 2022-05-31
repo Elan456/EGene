@@ -13,7 +13,8 @@ outs = {"xor": [[0], [1], [1], [0]],
 guide = pygene.Species([1,2,1], 1, train_inputs=ins, train_outputs=outs, use_sigmoid=True, popsize=1000, add_bias_nodes=True)
 for _ in range(100):  # if you break up the training to one at a time you can see the network change over time.
     guide.train(1)
-    gameDisplay.blit(guide.get_best_agent().draw(gameDisplay), (0, 0))
+    gameDisplay.fill((0,0,0))
+    gameDisplay.blit(guide.get_best_agent().draw(size=250), (0, 0))
     pygame.display.update()
 
 while True:
