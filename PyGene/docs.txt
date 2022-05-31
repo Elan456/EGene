@@ -1,45 +1,72 @@
 How to use pygene
 
 1. Creating a species
-def __init__(self, shape, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
-                 initial_weights=None, datapergen=None, use_sigmoid=True, can_change_changerate=True,
-                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True):
-shape:
-    A list of values where each value is the number of nodes in that layer. The first value
-    must be the number of inputs and the last value is the number of outputs. For example, a shape of [2,4,1,3] would have
-    2 inputs, 3 outputs, and a total of 5 hidden nodes with 4 on the second layer and 1 on the third layer.
-changerate:
-    The initial change rate used when mutating the networks. If can_change_rate is True then, the change rate with be
-    halved everytime there is no improvement after 4 generations.
-popsize:
-    The number of individuals in the species. Values lower than 32 are not recommended because when the population is
-    divided by sixteenths, there would be less than 2 individuals in a section.
-train_inputs + train_outputs:
-    The inputs and outputs used when there is no custom score function. The length train_inputs must match the length of
-    train_outputs. Because there can be multiple inputs in a network, each example must be in a nested list.
-    For example, inputs of [[2],[3],[6]] would need a network with 1 input node whereas a input set of
-    [[2,3,6], [4,2,7]] would need a network with 3 inputs nodes. The first input correlates to the first output and so
-    on.
-scorefunction:
-    Pass a function. The function must take an agent as its first parameter and return the amount of loss. If you want
-    to use score instead of loss, just multiply the score by -1 to get the loss so higher scores are a lower loss.
-    Within the function you will want to use the agent.calico method to pass in inputs and get outputs. Those outputs
-    could control a video game character or anything, so you can figure out how good the agent is.
-initial_weights:
-    A list of weights that the first agent will be given. Useful when training needs to be paused and then resumed
-    without losing all progress.
-datapergen:
-    When not using a custom score function, determines how many of the input/output sets given are used in each
-    generation. Useful when massive amounts of training data are given but they shouldn't all be used each generation.
-    Each generation, a random selection of training data is used with datapergen size. Can't be larger than the number
-    of input sets being given.
-use_sigmoid:
-    Determines if the hidden nodes use a sigmoid activation function. If false, no activation functions will be used.
-can_change_changerate:
-    Whether the program will halve the changerate when there is no change in loss after 4 generation.
-use_multiprocessing:
-    Only used for custom score functions. Lets the agents be scored in parallel, utilizing more cpu.
-set_all_zero:
-    Initializes all agents with weights of zero instead of random values
-add_bias_nodes:
-    When true, a bias node (drawn with a pink color) is added to every layer that always has a value of 1.
+    All parameters in order of pygene.Species, * ones are required.
+    *shape:
+        A list of values where each value is the number of nodes in that layer. The first value
+        must be the number of inputs and the last value is the number of outputs. For example, a shape of [2,4,1,3] would have
+        2 inputs, 3 outputs, and a total of 5 hidden nodes with 4 on the second layer and 1 on the third layer.
+    *changerate:
+        The initial change rate used when mutating the networks. A very common value is .1. If can_change_rate is True then, the change rate with be
+        halved everytime there is no improvement after 4 generations.
+    popsize:
+        The number of individuals in the species. Values lower than 32 are not recommended because when the population is
+        divided by sixteenths, there would be less than 2 individuals in a section.
+    train_inputs + train_outputs:
+        The inputs and outputs used when there is no custom score function. The length train_inputs must match the length of
+        train_outputs. Because there can be multiple inputs in a network, each example must be in a nested list.
+        For example, inputs of [[2],[3],[6]] would need a network with 1 input node whereas a input set of
+        [[2,3,6], [4,2,7]] would need a network with 3 inputs nodes. The first input correlates to the first output and so
+        on.
+    scorefunction:
+        Pass a function. The function must take an agent as its first parameter and return the amount of loss. If you want
+        to use score instead of loss, just multiply the score by -1 to get the loss so higher scores are a lower loss.
+        Within the function you will want to use the agent.calico method to pass in inputs and get outputs. Those outputs
+        could control a video game character or anything, so you can figure out how good the agent is.
+    initial_weights:
+        A list of weights that the first agent will be given. Useful when training needs to be paused and then resumed
+        without losing all progress.
+    datapergen:
+        When not using a custom score function, determines how many of the input/output sets given are used in each
+        generation. Useful when massive amounts of training data are given but they shouldn't all be used each generation.
+        Each generation, a random selection of training data is used with datapergen size. Can't be larger than the number
+        of input sets being given.
+    use_sigmoid:
+        Determines if the hidden nodes use a sigmoid activation function. If false, no activation functions will be used.
+    can_change_changerate:
+        Whether the program will halve the changerate when there is no change in loss after 4 generation.
+    use_multiprocessing:
+        Only used for custom score functions. Lets the agents be scored in parallel, utilizing more cpu.
+    set_all_zero:
+        Initializes all agents with weights of zero instead of random values
+    add_bias_nodes:
+        When true, a bias node (drawn with a pink color) is added to every layer that always has a value of 1.
+
+2. Training your species
+    pygene.Species.train
+    *epochs
+        How many generations the species will be trained for.
+    show_pop
+        Whether the program prints the average loss and all losses of the population. Useful for seeing how homogenous
+        the population is.
+
+    When training, training with a small number of epochs in a loop instead of one train with a large number of epochs
+    allows you the opportunity to show the population's progress in solving the problem between generations.
+
+3. Using an agent
+    After training, there are two ways to access the best agent:
+        pygene.Species.get_best_agent()
+        pygene.Species.agents[0]
+    Taking the 0th index gives the best agent because they are sorted from best to worst, so agents[-1] is the worst
+    from the last generation.
+
+    Once you have the best agents with say `best_agent = species.get_best_agent()`, then you can use calico to give
+    inputs and get outputs with best_agent.calico(INPUT)
+
+    pygene.Species.Agent.calico
+    *inputs
+        The input to the network. For example, [3,4].
+    show_internals
+        Whether the program prints out the value of every node and weight after the calculation
+
+    A list of outputs is returned, this will still be a list even if there is only one output.
