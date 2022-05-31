@@ -1,6 +1,7 @@
 import copy
 import random
 import math
+import pygameTools as pgt
 
 import time
 from multiprocessing import Pool
@@ -20,25 +21,6 @@ colors = {"input": (37, 37, 125),
           "hidden": (100, 0, 0),
           "output": (0, 150, 0),
           "bias": (200, 0, 200)}
-
-
-def draw_line_as_polygon(gameDisplay, startpos, endpos, width,
-                         color, aa=True):  # Wide lines look ugly compared to polygons this draws a polygon as a line
-    startx, starty = startpos
-    endx, endy = endpos
-    angle = math.atan2(endy - starty, endx - startx)
-    perpangle = angle - math.pi / 2
-
-    m = math
-
-    coords = [(startx + math.cos(perpangle) * width, starty + m.sin(perpangle) * width),
-              (startx + math.cos(perpangle) * -1 * width, starty + m.sin(perpangle) * -1 * width),
-              (endx + math.cos(perpangle) * -1 * width, endy + m.sin(perpangle) * -1 * width),
-              (endx + math.cos(perpangle) * width, endy + m.sin(perpangle) * width)]
-
-    pygame.draw.polygon(gameDisplay, color, coords)
-    if aa:
-        gfxdraw.aapolygon(gameDisplay, coords, color)
 
 
 def breaklist(L, list_count):
@@ -86,8 +68,8 @@ def duplicatechecker(x):
 
 
 def custom_eval(t):
-    scorefunction, agent = t
-    return scorefunction(agent)
+    scorefunction, network = t
+    return scorefunction(network)
 
 
 class Species:
@@ -143,21 +125,21 @@ class Species:
         self.popsize = popsize
         self.changerate = changerate
 
-        self.agents = []
+        self.networks = []
 
-        for p in range(popsize):  # Creating first generation of agents
-            self.agents.append(Agent(self.shape, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
-        print("--First agents made")
+        for p in range(popsize):  # Creating first generation of networks
+            self.networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
+        print("--First networks made")
         # INITAL WEIGHTS
         if self.initalweights is not None and self.set_all_zero is False:
-            for v in range(len(self.agents[0].w)):
-                self.agents[0].w[v].value = self.initalweights[v]
+            for v in range(len(self.networks[0].w)):
+                self.networks[0].w[v].value = self.initalweights[v]
         # print("-- Initial Weights initalized")
-        # for p in self.agents:
+        # for p in self.networks:
         #     print(p.calico([2, 3]))
 
-    def evaluate(self, p, inputs,
-                 output):  # Using an input it calculates the loss or score of the agent default scorefuction
+    @staticmethod
+    def evaluate(p, inputs, output):  # Using an input it calculates the loss or score of the network default scorefuction
         loss = 0
 
         # print("initalloss:",self.loss)
@@ -179,10 +161,25 @@ class Species:
         # print("Desired Output:", output, "Output reciceved", gen_output, "loss", self.loss)
         return loss
 
-    def scoreall(self, show, scorefunction):  # Evaluates all of the agents and puts them in order from best to worst
-        # print("SCORE")
-        # MUST PICK WHICH INPUTS AND OUTPUTS WILL BE USED FOR EVALUATION
-        if not self.using_custom_score_function:  # Chooses the input output stuff
+    def scoreall(self, show, scorefunction):  # Evaluates all of the networks and puts them in order from best to worst
+
+        if self.using_custom_score_function:  # if a custom function is being use
+            if self.use_multiprocessing:
+                data = []
+                p = Pool()
+                for a in self.networks:
+                    data.append((self.scorefunction, a))
+
+                results = p.map(custom_eval, data)
+
+                for a in range(len(self.networks)):
+                    self.networks[a].loss = results[a]
+                print("---")
+                print("AVG loss:", sum(results) / len(results), "in order:", sorted(results))
+            else:
+                for a in range(len(self.networks)):
+                    self.networks[a].loss = self.scorefunction(self.networks[a])
+        else:  # If a list of inputs and outputs are being used for training
             inout = []  # List of tuples with each tuple having input, output
             for i in range(len(self.train_inputs)):
                 inout.append((self.train_inputs[i], self.train_outputs[i]))
@@ -192,39 +189,13 @@ class Species:
             for i in range(self.datapergen):
                 ins.append(inout[i][0])
                 outs.append(inout[i][1])
-
-        if self.using_custom_score_function:  # if a custom function is being use
-            # print("MANAGER ABOUT TO BE MADE")
-            # manager = multiprocessing.Manager()
-            # return_dict = manager.dict()
-            # sections = breaklist(self.agents, 16)
-            # print("SECTIONS CREATED\n")
-
-            if self.use_multiprocessing:
-                data = []
-                p = Pool()
-                for a in self.agents:
-                    data.append((self.scorefunction, a))
-
-                results = p.map(custom_eval, data)
-
-                for a in range(len(self.agents)):
-                    self.agents[a].loss = results[a]
-                print("---")
-                print("AVG loss:", sum(results) / len(results), "in order:", sorted(results))
-            else:
-                for a in range(len(self.agents)):
-                    self.agents[a].loss = self.scorefunction(self.agents[a])
-
-        else:
-
-            for p in self.agents:
+            for p in self.networks:
                 p.loss = scorefunction(p, ins, outs)
 
-        self.agents.sort(key=lambda x: x.loss)
+        self.networks.sort(key=lambda x: x.loss)
 
     def crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
-        child = Agent(self.shape, self.use_sigmoid, self.add_bias_nodes)
+        child = Network(self.shape, self.use_sigmoid, self.add_bias_nodes)
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
@@ -244,58 +215,58 @@ class Species:
 
         return child
 
-    def mutate(self, agent):  # Adds some random variation to some weights
-        # print("Before mutation:", [w.value for w in agent.w])
-        for w in agent.w:
+    def mutate(self, network):  # Adds some random variation to some weights
+        # print("Before mutation:", [w.value for w in network.w])
+        for w in network.w:
             w.value += random.random() * random.choice([-1, 0, 0, 0, 1]) * self.changerate
-        # print("After  mutation:", [w.value for w in agent.w])
-        return agent
+        # print("After  mutation:", [w.value for w in network.w])
+        return network
 
-    def nextgen(self):  # Crosses over and mutates certain agents
+    def nextgen(self):  # Crosses over and mutates certain networks
         choices = []
         # print("NEWGEN")
         # print("\n\n")
 
         # print(choices)
-        best_weights = self.agents[0].w
+        best_weights = self.networks[0].w
         n = 0
         # print()
         # print("ENTIRE POPULATION BEFORE CHANGES")
-        # for p in self.agents:
+        # for p in self.networks:
         #     print([w.value for w in p.w])
-        max_index = max(4, int(self.popsize / 16))  # The worst agent possible for reproduction
+        max_index = max(4, int(self.popsize / 16))  # The worst network possible for reproduction
 
-        for p in range(len(self.agents) // 16, len(self.agents)):  # Only the worst 15/16 are changed
+        for p in range(len(self.networks) // 16, len(self.networks)):  # Only the worst 15/16 are changed
 
             n += 1
             while True:  # Choosing the two parents
                 # print("0 to", max(2, int(self.popsize / 16)))
 
-                p1 = self.agents[random.randint(0, max_index)]
-                p2 = self.agents[random.randint(0, max_index)]
+                p1 = self.networks[random.randint(0, max_index)]
+                p2 = self.networks[random.randint(0, max_index)]
                 # print(p1,p2)
 
                 if p1 != p2:
                     break
             # print("p1,p2", p1, p2)
 
-            self.agents[p] = self.crossover(p1, p2)  # Crosses the parents to produce a child
-            self.agents[p] = self.mutate(self.agents[p])  # Mutates the child based on the change rate
+            self.networks[p] = self.crossover(p1, p2)  # Crosses the parents to produce a child
+            self.networks[p] = self.mutate(self.networks[p])  # Mutates the child based on the change rate
         # print("ENTIRE POPULATION AFTER CHANGES")
-        # for p in self.agents:
+        # for p in self.networks:
         #     print([w.value for w in p.w])
 
         # print("Changed:",n)
         # print("Newval:", p.w[j].value)
-        # print(int(len(self.agents)*(15/16)))
+        # print(int(len(self.networks)*(15/16)))
 
-        for p in range(int(len(self.agents) * (15 / 16)),
-                       len(self.agents)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
-            p1 = self.agents[random.randint(0, max_index)]
-            w_index = random.randint(0, len(self.agents[0].w) - 1)
-            # for i, v in enumerate(self.agents[p].w):
-            self.agents[p].w = copy.deepcopy(p1.w)
-            self.agents[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.changerate + p1.w[
+        for p in range(int(len(self.networks) * (15 / 16)),
+                       len(self.networks)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
+            p1 = self.networks[random.randint(0, max_index)]
+            w_index = random.randint(0, len(self.networks[0].w) - 1)
+            # for i, v in enumerate(self.networks[p].w):
+            self.networks[p].w = copy.deepcopy(p1.w)
+            self.networks[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.changerate + p1.w[
                 w_index].value
 
     def train(self, epochs, show_pop=False):
@@ -304,8 +275,8 @@ class Species:
 
             self.scoreall(True, self.scorefunction)
 
-            self.all_blost.append(self.agents[0].loss)
-            print(self.epochs, ":", "loss:", self.agents[0].loss, self.agents[0].show())
+            self.all_blost.append(self.networks[0].loss)
+            print(self.epochs, ":", "loss:", self.networks[0].loss, self.networks[0].show())
             # print("-2:", all_blost[v-2], "v:", all_blost[v])
             if len(self.all_blost) > 4 and self.all_blost[self.epochs - 4] == self.all_blost[
                 self.epochs] and self.can_change_changerate:
@@ -313,16 +284,16 @@ class Species:
                 print("--\nNo change from 4 gens ago so changerate is being lowered to", self.changerate, "\n--")
 
             if show_pop:
-                all_losses = [a.loss for a in self.agents]
+                all_losses = [a.loss for a in self.networks]
                 print("Avg:", sum(all_losses) / len(all_losses), "Losses:", all_losses)
             self.epochs += 1
             self.nextgen()
 
-    def get_best_agent(self):
-        return self.agents[0]
+    def get_best_network(self):
+        return self.networks[0]
 
 
-class Agent:
+class Network:
     def __init__(self, shape, use_sigmoid, add_bias_nodes, set_all_zero=False):
         self.loss = 0
         self.use_sigmoid = use_sigmoid
@@ -362,7 +333,7 @@ class Agent:
 
                     if n == self.shape[l]:
                         type = "bias"  # Overrides other types
-                    self.nodes.append(Agent.Node(type, (x, y), l, n, self.use_sigmoid, self.node_draw_size))
+                    self.nodes.append(Network.Node(type, (x, y), l, n, self.use_sigmoid, self.node_draw_size))
 
         layer_starts.append(len(self.nodes))
         # print("nodes made")
@@ -391,9 +362,9 @@ class Agent:
                             # weights can only connect from the bias node not to bias node.
                             #   print("Good to conncet to")
                             if self.set_all_zero is False:
-                                self.w.append(Agent.Wij(random.choice([-1, 1]) * random.random(), n, t))
+                                self.w.append(Network.Edge(random.choice([-1, 1]) * random.random(), n, t))
                             else:
-                                self.w.append(Agent.Wij(0, n, t))
+                                self.w.append(Network.Edge(0, n, t))
                         else:
                             pass
                         #  print("A bias node")
@@ -446,7 +417,7 @@ class Agent:
             print("PNode:", (we.pnode.layer, we.pnode.node), "| TNode:", (we.tnode.layer, we.tnode.node),
                   "| Value:", we.value)
 
-    def calico(self, inputs, show_internals=False):  # Using an input and its weights the agent returns an output
+    def calico(self, inputs, show_internals=False):  # Using an input and its weights the network returns an output
 
         self.set_input_nodes_to_input_values(inputs)
 
@@ -534,7 +505,7 @@ class Agent:
                                  [self.location[0] - self.draw_size, self.location[1] - self.draw_size, self.draw_size,
                                   self.draw_size * 2 + 1])
 
-    class Wij:  # The connection between nodes with weights
+    class Edge:  # The connection between nodes with weights
         def __init__(self, value, pnode, tnode):  # Each weight has a value and connects the pnode to the tnode
             self.value = value
             self.pnode = pnode
@@ -551,7 +522,7 @@ class Agent:
                 start_loc = (self.pnode.location[0] + node_radius - width, self.pnode.location[1])
                 end_loc = (self.tnode.location[0] - node_radius + width, self.tnode.location[1])
                 # yf.draw_line_as_polygon(display, (self.pnode.location[0] + node_radius, self.pnode.location[1]), (self.tnode.location[0] - node_radius, self.tnode.location[1]), width, (100, 100, 100))
-                draw_line_as_polygon(display, start_loc, end_loc, width, c)
+                pgt.draw_line_as_polygon(display, start_loc, end_loc, width, c)
             # pygame.draw.line(display, black, self.pnode.location, self.tnode.location, width + 2)
             # pygame.draw.line(display, c, self.pnode.location, self.tnode.location, width)
 
@@ -561,7 +532,7 @@ class Agent:
             a.append(v.value)
         return a
 
-    def draw(self, size=500):
+    def draw(self, size=500, show_internals=False):
         surface = pygame.Surface((500, 500))
         surface.fill(black)
         largest_weight = max([abs(v.value) for v in self.w])
@@ -569,8 +540,13 @@ class Agent:
 
         for p in self.w:
             p.draw(round((abs(p.value) / largest_weight) * self.node_draw_size * .3, 0), surface, self.node_draw_size)
+            if show_internals:
+                pgt.text(surface, ((p.tnode.location[0] + p.pnode.location[0] * 1.5)/2.5,
+                                   (p.tnode.location[1] + p.pnode.location[1] * 1.5)/2.5), str(round(p.value, 2)), white, 15)
         for n in self.nodes:
             n.draw(surface)
+            if show_internals:
+                pgt.text(surface, n.location, str(round(n.value, 2)), white, 15)
         if size != 500:
             surface = pygame.transform.scale(surface, (size, size))
         return surface
