@@ -75,12 +75,13 @@ def custom_eval(t):
 class Species:
     def __init__(self, shape, changerate, popsize=32, train_inputs=None, train_outputs=None, scorefunction=None,
                  initial_weights=None, datapergen=None, use_sigmoid=True, can_change_changerate=True,
-                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True):
+                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
         self.can_change_changerate = can_change_changerate
         self.set_all_zero = set_all_zero
         self.add_bias_nodes = add_bias_nodes
+        self.window_size = native_window_size
 
         self.epochs = 0  # Count of all epochs every trained on this species
         self.lowestlost = float("inf")
@@ -128,7 +129,7 @@ class Species:
         self.networks = []
 
         for p in range(popsize):  # Creating first generation of networks
-            self.networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.set_all_zero))
+            self.networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
         print("--First networks made")
         # INITAL WEIGHTS
         if self.initalweights is not None and self.set_all_zero is False:
@@ -193,7 +194,7 @@ class Species:
         self.networks.sort(key=lambda x: x.loss)
 
     def crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
-        child = Network(self.shape, self.use_sigmoid, self.add_bias_nodes)
+        child = Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size)
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
@@ -292,21 +293,22 @@ class Species:
 
 
 class Network:
-    def __init__(self, shape, use_sigmoid, add_bias_nodes, set_all_zero=False):
+    def __init__(self, shape, use_sigmoid, add_bias_nodes, window_size, set_all_zero=False):
         self.loss = 0
         self.use_sigmoid = use_sigmoid
         self.set_all_zero = set_all_zero
         self.shape = shape
+        self.window_size = window_size
 
         # Initiate nodes ------------
         self.nodes = []
-        xscale = 500 / (len(self.shape) + 1)
+        xscale = self.window_size / (len(self.shape) + 1)
 
         xstart = xscale
         layer_starts = []  # Keeps track of where each layer starts so weights are created faster
 
         # Determining the radius of the nodes when drawn so they all fit
-        self.node_draw_size = min(int(450 / max(self.shape) / 2.2), int(xscale / 10))
+        self.node_draw_size = min(int((self.window_size-50)/ max(self.shape) / 2.2), int(xscale / 10))
         # print("creating nodes")
 
         # Node Creation
@@ -320,7 +322,7 @@ class Network:
                 layersize = self.shape[l]
             for n in range(layersize):  # Each node in the layer +1 for bias:
                 if not (n == self.shape[l] and l == len(self.shape) - 1):  # Prevents bias on output layer
-                    yscale = 500 / (layersize + 1)
+                    yscale = self.window_size / (layersize + 1)
                     y = int(n * yscale + yscale)
                     if l == 0:
                         type = "input"
@@ -530,21 +532,32 @@ class Network:
             a.append(v.value)
         return a
 
-    def draw(self, size=500, show_internals=False):
-        surface = pygame.Surface((500, 500))
-        surface.fill(black)
+    def draw(self, show_internals=False, independent=False):
+        if independent:
+            display = pygame.display.set_mode((self.window_size, self.window_size))
+            pygame.init()
+            pygame.display.set_caption("Network Viewer")
+
+        surface = pygame.Surface((self.window_size, self.window_size))
         largest_weight = max([abs(v.value) for v in self.w])
         # print("Largest weight:", largest_weight, "list of weights:", self.show())
 
         for p in self.w:
             p.draw(round((abs(p.value) / largest_weight) * self.node_draw_size * .3, 0), surface, self.node_draw_size)
             if show_internals:
-                pgt.text(surface, ((p.tnode.location[0] + p.pnode.location[0] * 1.5)/2.5,
-                                   (p.tnode.location[1] + p.pnode.location[1] * 1.5)/2.5), str(round(p.value, 2)), white, 15)
+                pgt.text(surface, ((p.tnode.location[0] + p.pnode.location[0] * 1.5) / 2.5,
+                                   (p.tnode.location[1] + p.pnode.location[1] * 1.5) / 2.5), str(round(p.value, 2)), white, 20)
         for n in self.nodes:
             n.draw(surface)
             if show_internals:
-                pgt.text(surface, n.location, str(round(n.value, 2)), white, 15)
-        if size != 500:
-            surface = pygame.transform.scale(surface, (size, size))
+                pgt.text(surface, n.location, str(round(n.value, 2)), white, 20)
+
+        while independent:
+            display.blit(surface, (0, 0))
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    independent = False
+                    pygame.quit()
+
         return surface
