@@ -325,15 +325,15 @@ class Network:
         for v in range(len(self.w)):
             self.w[v].value = weights[v]
 
-    def set_input_nodes_to_input_values(self, inputs):
+    def set_layer_values(self, layer, values):
         for n in self.nodes:
             n.value = 0
 
-            if n.layer == 0:  # If it is on the input layer
-                if n.node == self.shape[0]:  # Checks if the node is the bias node
+            if n.layer == layer:  # If it is on the selected layer
+                if n.node == self.shape[layer]:  # Checks if the node is the bias node
                     n.value = 1
                 else:
-                    n.value = inputs[n.node]  # Sets the input nodes to their corresponding input
+                    n.value = values[n.node]  # Sets the input nodes to their corresponding input
 
     def feedforward_calculate(self):
         for active_layer in range(len(self.shape) + 1):
@@ -362,26 +362,20 @@ class Network:
 
     def calico(self, inputs, show_internals=False):  # Using an input and its weights the network returns an output
 
-        self.set_input_nodes_to_input_values(inputs)
+        self.set_layer_values(0, inputs)  # Sets the input layer to the input values
 
         self.feedforward_calculate()
-        outputs = self.collect_output_layer()
 
         if show_internals:
             self.list_internal_values()
 
-        return outputs
+        return self.collect_output_layer()
 
     def calico_from_hidden_layer(self, layer, values, show_internals=False):  # Starts the feedforward at a different layer
-        for n in self.nodes:
-            n.value = 0
+        self.set_layer_values(layer, values)  # Sets the selected layer to the given values
 
-            if n.layer == layer:  # If it is on hidden layer that is being manipulated
-                n.value = values[n.node]  # Sets the input nodes to their corresponding input
-
-        for active_layer in range(len(self.shape) + 1):
+        for active_layer in range(len(self.shape) + 1):  # Only feed forwards from the starting layer
             if active_layer >= layer:
-                print("L", active_layer)
                 for n in self.nodes:
                     if n.layer == active_layer:
                         n.value = n.activation_function(n.value)
@@ -389,18 +383,9 @@ class Network:
                     if v.pnode.layer == active_layer:
                         v.tnode.value += v.pnode.value * v.value
 
-        outputs = []
-        for n in self.nodes:
-            if n.layer == len(self.shape) - 1:  # If it is on the output layer
-                outputs.append(n.value)
-
         if show_internals:
-            for n in self.nodes:
-                print("Layer: ", n.layer, "| Node: ", n.node, "| Value: ", n.value)
-            for we in self.w:
-                print("PNode:", (we.pnode.layer, we.pnode.node), "| TNode:", (we.tnode.layer, we.tnode.node),
-                      "| Value:", we.value)
-        return outputs
+            self.list_internal_values()
+        return self.collect_output_layer()
 
     class Node:
         def __init__(self, node_type, location, layer, node, use_sigmoid, draw_size):
