@@ -10,7 +10,6 @@ from pygame import gfxdraw
 
 pygame.init()
 
-# else:
 gameDisplay = pygame.Surface((10, 10))
 
 black = (0, 0, 0)
@@ -22,20 +21,11 @@ colors = {"input": (37, 37, 125),
           "bias": (200, 0, 200)}
 
 
-def break_list(L, list_count):
-    lists = []
-    items_per_list = len(L) / list_count
-
-    for v in range(list_count):
-        lists.append([])
-
-    for v in range(len(L)):
-        lists[int(v / items_per_list)].append(L[v])
-    return lists
-
-
 def sigmoid(x):
-    # print("USING SIGMOID")
+    """
+    Uses the sigmoid function on x. High values become close to 1 while low/negative values become close to 0
+    :return: The sigmoid of x, always between 0 and 1
+    """
     try:
         y = 1 / (1 + math.e ** (-1 * x))
     except OverflowError:
@@ -44,6 +34,10 @@ def sigmoid(x):
 
 
 def donata(x):
+    """
+    A function that does nothing. For nodes without an activation function
+    :return: x
+    """
     return x
 
 
@@ -56,6 +50,11 @@ class CustomError(Exception):
 
 
 def duplicate_checker(x):
+    """
+    Checks if a list contains duplicates
+    :param x: A list
+    :return: True or False
+    """
     uniquevalues = []
 
     for v in x:
@@ -132,7 +131,14 @@ class Species:
                 self.networks[0].w[v].value = self.initial_weights[v]
 
     @staticmethod
-    def evaluate(p, inputs, output):  # Using an inputs and outputs it calculates the loss of the network
+    def evaluate(p, inputs, output):
+        """
+        Calculates the loss of a network based on a given input and output set
+        :param p: A network
+        :param inputs: One set of inputs
+        :param output: The corresponding output set
+        :return: loss
+        """
         loss = 0
 
         for active_input_index in range(len(inputs)):
@@ -142,7 +148,7 @@ class Species:
             for o in range(len(gen_output)):  # for handling networks with multiple outputs
                 loss += abs(gen_output[o] - desired_output[o])
 
-        loss /= len(inputs)  # division for average loss, so data_per_gen does not directly affect loss
+        loss /= len(inputs)  # division for average loss, to account for network with many outputs
         return loss
 
     def score_all(self, loss_function):  # Evaluates all the networks and puts them in order from best to worst
