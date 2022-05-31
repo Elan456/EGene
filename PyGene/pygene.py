@@ -174,8 +174,6 @@ class Species:
 
                 for a in range(len(self.networks)):
                     self.networks[a].loss = results[a]
-                print("---")
-                print("AVG loss:", sum(results) / len(results), "in order:", sorted(results))
             else:
                 for a in range(len(self.networks)):
                     self.networks[a].loss = self.scorefunction(self.networks[a])
@@ -276,7 +274,7 @@ class Species:
             self.scoreall(True, self.scorefunction)
 
             self.all_blost.append(self.networks[0].loss)
-            print(self.epochs, ":", "loss:", self.networks[0].loss, self.networks[0].show())
+            print("\n", self.epochs, ":", "loss:", self.networks[0].loss, self.networks[0].show())
             # print("-2:", all_blost[v-2], "v:", all_blost[v])
             if len(self.all_blost) > 4 and self.all_blost[self.epochs - 4] == self.all_blost[
                 self.epochs] and self.can_change_changerate:
