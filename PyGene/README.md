@@ -12,6 +12,9 @@ a genetic algorithum
 + Viewing the neural network
 + Pygame surfaces integration
 
+# Documentation
++ docs.md
+
 Installation
 ------------
 
