@@ -131,14 +131,7 @@ class Species:
                 self.networks[0].w[v].value = self.initial_weights[v]
 
     @staticmethod
-    def evaluate(p, inputs, output):
-        """
-        Calculates the loss of a network based on a given input and output set
-        :param p: A network
-        :param inputs: One set of inputs
-        :param output: The corresponding output set
-        :return: loss
-        """
+    def evaluate(p, inputs, output):  # Calculates the loss of a network based on a given input and output set
         loss = 0
 
         for active_input_index in range(len(inputs)):
@@ -187,10 +180,7 @@ class Species:
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
-        # print()
-        # print("Parent 1:", [w.value for w in p1.w])
-        # print("Parent 2:", [w.value for w in p2.w])
-        # print("Cross point:", cross_point)
+
 
         for v in range(len(child.w)):  # Changes every weight
             if v < cross_point:
@@ -198,16 +188,11 @@ class Species:
             else:
                 child.w[v].value = orientation[1].w[v].value
 
-        # print("Child   :", [w.value for w in child.w])
-        # print()
-
         return child
 
     def mutate(self, network):  # Adds some random variation to some weights
-        # print("Before mutation:", [w.value for w in network.w])
         for w in network.w:
             w.value += random.random() * random.choice([-1, 0, 0, 0, 1]) * self.change_rate
-        # print("After  mutation:", [w.value for w in network.w])
         return network
 
     def nextgen(self):  # Crosses over and mutates certain networks
@@ -218,15 +203,11 @@ class Species:
 
             n += 1
             while True:  # Choosing the two parents
-                # print("0 to", max(2, int(self.pop_size / 16)))
-
                 p1 = self.networks[random.randint(0, max_index)]
                 p2 = self.networks[random.randint(0, max_index)]
-                # print(p1,p2)
 
                 if p1 != p2:
                     break
-            # print("p1,p2", p1, p2)
 
             self.networks[p] = self.crossover(p1, p2)  # Crosses the parents to produce a child
             self.networks[p] = self.mutate(self.networks[p])  # Mutates the child based on the change rate
@@ -279,7 +260,6 @@ class Network:
 
         # Determining the radius of the nodes when drawn, so they all fit
         self.node_draw_size = min(int((self.window_size - 50) / max(self.shape) / 2.2), int(x_scale / 10))
-        # print("creating nodes")
 
         # Node Creation
         for active_layer in range(len(self.shape)):  # Each layer
@@ -408,7 +388,6 @@ class Network:
 
                     self.activation_function = donata
                     self.color = (255, 128, 0)
-                    # print("NOT USING SIGMOID, layer is", self.layer)
                 else:
 
                     self.activation_function = sigmoid
@@ -466,7 +445,6 @@ class Network:
 
         surface = pygame.Surface((self.window_size, self.window_size))
         largest_weight = max([abs(v.value) for v in self.w])
-        # print("Largest weight:", largest_weight, "list of weights:", self.show())
 
         for p in self.w:
             p.draw(round((abs(p.value) / largest_weight) * self.node_draw_size * .3, 0), surface, self.node_draw_size)
