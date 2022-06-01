@@ -71,7 +71,7 @@ def custom_eval(t):
 
 
 class Species:
-    def __init__(self, shape, change_rate, pop_size=32, train_inputs=None, train_outputs=None, loss_function=None,
+    def __init__(self, shape, initial_change_rate=1, pop_size=32, train_inputs=None, train_outputs=None, loss_function=None,
                  initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True,
                  use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
         self.use_multiprocessing = use_multiprocessing
@@ -118,7 +118,7 @@ class Species:
         self.train_inputs = train_inputs
         self.train_outputs = train_outputs
         self.pop_size = pop_size
-        self.change_rate = change_rate
+        self.change_rate = initial_change_rate
 
         self.networks = []
 
