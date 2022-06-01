@@ -20,14 +20,8 @@ for _ in range(100):  # if you break up the training to one at a time you can se
     gameDisplay.blit(guide.get_best_network().draw(), (0, 0))
     pygame.display.update()
 
-
-
 while True:
     testins = [float(a) for a in input(str(len(ins[0]))+" inputs separated by commas:\n").split(",")]
     print(guide.get_best_network().calico(testins, show_internals=False))
-    guide.get_best_network().draw(show_internals=True, independent=True)
-
-
-
-    #gameDisplay.blit(guide.get_best_network().draw(show_internals=True), (0, 0))
-    #pygame.display.update()
+    img = guide.get_best_network().draw(show_internals=True, independent=True)
+    pygame.image.save(img, "XORexample.png")

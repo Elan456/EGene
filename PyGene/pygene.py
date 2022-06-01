@@ -253,13 +253,12 @@ class Network:
 
         # Initiate nodes ------------
         self.nodes = []
-        x_scale = self.window_size / (len(self.shape) + 1)
-
-        x_start = x_scale
+        x_scale = self.window_size / len(self.shape)
+        x_start = x_scale / 2
         layer_starts = []  # Keeps track of where each layer starts so weights are created faster
 
         # Determining the radius of the nodes when drawn, so they all fit
-        self.node_draw_size = min(int((self.window_size - 50) / max(self.shape) / 2.2), int(x_scale / 10))
+        self.node_draw_size = min(int((self.window_size - 50) / max(self.shape) / 2.2), int(x_scale / 5))
 
         # Node Creation
         for active_layer in range(len(self.shape)):  # Each layer
@@ -272,8 +271,8 @@ class Network:
                 layer_size = self.shape[active_layer]
             for n in range(layer_size):  # Each node in the layer +1 for bias:
                 if not (n == self.shape[active_layer] and active_layer == len(self.shape) - 1):  # Prevents bias on output layer
-                    y_scale = self.window_size / (layer_size + 1)
-                    y = int(n * y_scale + y_scale)
+                    y_scale = self.window_size / layer_size
+                    y = int(n * y_scale + (y_scale/2))
                     if active_layer == 0:
                         node_type = "input"
                     elif active_layer == len(self.shape) - 1:
@@ -448,7 +447,8 @@ class Network:
 
         for p in self.w:
             p.draw(round((abs(p.value) / largest_weight) * self.node_draw_size * .3, 0), surface, self.node_draw_size)
-            if show_internals:
+        if show_internals:
+            for p in self.w:  # Again so the text is not covered by any edges
                 pgt.text(surface, ((p.tnode.location[0] + p.pnode.location[0] * 1.5) / 2.5,
                                    (p.tnode.location[1] + p.pnode.location[1] * 1.5) / 2.5), str(round(p.value, 2)), white, 20)
         for n in self.nodes:

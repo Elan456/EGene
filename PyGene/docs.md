@@ -1,6 +1,6 @@
 # Documentaion
 
-## Quick Example XOR
+## XOR Quick Example
 
 ### Getting training data and shape ready
 First, decide what you are going to train the network to do.
@@ -58,16 +58,29 @@ training if you wanted.
 
 Collects the best network from the species
 
+#### Calcio
+
 `best_network.calico([0, 1])`
 
 `calico` stands for *calculate output* and uses the provided inputs with the
 network to get output(s).
 With inputs `[0, 1]` trained to do XOR, we expect an output of nearly 1 from the network
 
-### Full Example Without Any Visualizations
+#### Visualize
+
+`best_network.draw(show_internals=True, independent=True)`
+
+Creates a window showing the network instead of
+just returning a surface because `independent` is `True`. 
+The window must be closed to move on because the window is not run in parallel.
+
+![XORnetwork](https://github.com/Elan456/PyGene/blob/develop/PyGene/XORexample.png?raw=true)
+
+## Full XOR Example Without Any Visualizations
 
 ```
 import pygene
+
 input_data = [[0, 0], [0, 1], [1, 0], [1, 1]]
 output_data = [[0], [1], [1], [0]]
 
