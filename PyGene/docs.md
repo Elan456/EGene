@@ -1,6 +1,6 @@
-# Documentation
+# PyGene Documentation
 
-## XOR Quick Example
+## XOR Example
 
 ### Getting training data and shape ready
 First, decide what you are going to train the network to do.
@@ -95,10 +95,18 @@ If you only want the pygame surface returned, set `independent` to `false`.
 `show_internals` causes the values of all the nodes and edges to be drawn ontop of them.
 
 ![XORnetwork](https://github.com/Elan456/PyGene/blob/develop/PyGene/XORexample.png?raw=true)
-The different colors matter. The dark blue color is for input nodes. The bright pink shows
-the bias nodes. The blueish green is for hidden layers using a 
-sigmoid activation function. Orange is for hidden layers without an activation function
-Green is for the output nodes. 
+The different colors matter:
+
+**Nodes**  
+Dark Blue: Input nodes  
+Blueish green: Sigmoid activated hidden node  
+Orange: Hidden node without activation function  
+Pink: Bias node  
+Green: Output node
+
+**Edges**  
+Green: Positive values  
+Red: Negative values
 ## Full XOR Example Without Any Visualizations
 
 ```
