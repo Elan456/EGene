@@ -1,15 +1,17 @@
 How to use pygene
-
+def __init__(self, shape, initial_change_rate=1, pop_size=32, train_inputs=None, train_outputs=None, loss_function=None,
+                 initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True,
+                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
 1. Creating a species
-    All parameters in order of pygene.Species, * ones are required.
-    *shape:
+
+    shape:
         A list of values where each value is the number of nodes in that layer. The first value
         must be the number of inputs and the last value is the number of outputs. For example, a shape of [2,4,1,3] would have
         2 inputs, 3 outputs, and a total of 5 hidden nodes with 4 on the second layer and 1 on the third layer.
-    *changerate:
-        The initial change rate used when mutating the networks. A very common value is .1. If can_change_rate is True then, the change rate with be
+    initial_change_rate:
+        The initial change rate used when mutating the networks. If can_change_rate is True then, the change rate will be
         halved everytime there is no improvement after 4 generations.
-    popsize:
+    pop_size:
         The number of individuals in the species. Values lower than 32 are not recommended because when the population is
         divided by sixteenths, there would be less than 2 individuals in a section.
     train_inputs + train_outputs:
@@ -18,15 +20,15 @@ How to use pygene
         For example, inputs of [[2],[3],[6]] would need a network with 1 input node whereas a input set of
         [[2,3,6], [4,2,7]] would need a network with 3 inputs nodes. The first input correlates to the first output and so
         on.
-    scorefunction:
-        Pass a function. The function must take an agent as its first parameter and return the amount of loss. If you want
+    loss_function:
+        Pass a function. The function must take an network as its first parameter and return the amount of loss. If you want
         to use score instead of loss, just multiply the score by -1 to get the loss so higher scores are a lower loss.
-        Within the function you will want to use the agent.calico method to pass in inputs and get outputs. Those outputs
-        could control a video game character or anything, so you can figure out how good the agent is.
+        Within the function you will want to use the network.calico method to pass in inputs and get outputs. Those outputs
+        could control a video game character or anything, so you can figure out how good the network is.
     initial_weights:
-        A list of weights that the first agent will be given. Useful when training needs to be paused and then resumed
+        A list of weights that the first network will be given. Useful when training needs to be paused and then resumed
         without losing all progress.
-    datapergen:
+    data_per_gen:
         When not using a custom score function, determines how many of the input/output sets given are used in each
         generation. Useful when massive amounts of training data are given but they shouldn't all be used each generation.
         Each generation, a random selection of training data is used with datapergen size. Can't be larger than the number
@@ -36,9 +38,9 @@ How to use pygene
     can_change_changerate:
         Whether the program will halve the changerate when there is no change in loss after 4 generation.
     use_multiprocessing:
-        Only used for custom score functions. Lets the agents be scored in parallel, utilizing more cpu.
+        Only used for custom score functions. Lets the networks be scored in parallel, utilizing more cpu.
     set_all_zero:
-        Initializes all agents with weights of zero instead of random values
+        Initializes all networks with weights of zero instead of random values
     add_bias_nodes:
         When true, a bias node (drawn with a pink color) is added to every layer that always has a value of 1.
 
