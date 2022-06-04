@@ -48,8 +48,15 @@ To see how the network changes over time, break the training
 up into many small segments and draw the best network 
 between each segment:
 
-The optional parameter `show_pop` determines if the program prints the average loss and all losses of the population.
-Useful for seeing how homogenous the population is.
+Optional parameters
++ `print_progress`  
+ Determines if the weights and loss of the best network are printed after each
+ generation.
+  
+
++ `print_population_losses`  
+  Determines if the loss of all networks in the population are listed. Useful for seeing how
+  homogenous the population is. 
 
 ```
 for _ in range(100):
@@ -58,16 +65,18 @@ for _ in range(100):
     pygame.display.update()
 ```
 
-The `for` loop still trains it for 100 generations, but you can *see* how the network evolves.
+The `for` loop still trains the species for 100 generations, but you can now *see* how the network evolves because
+the network is being visualized between each generation.
 If the networks are playing a game, you could show the best one playing between
 training if you wanted.
 
 ### Using your trained network
+#### Getting the best network
 Both  
 `best_network = my_species.get_best_network()`  
 and  
 `best_network = my_species.networks[0]`  
-collect the best network from the species because the network are sorted from best to worst.
+collect the best network from the species because the networks are sorted from best to worst.
 
 #### Calico
 
@@ -86,7 +95,7 @@ input layer.
 `best_network.calico_from_hidden_layer(1, [2, 3])`
 
 Layer counting starts at 0 with the input layer, so layer 1 is the first hidden layer.
-This line set the two nodes on layer 1 to the values 2 and 3 before they are activated, and returns
+This line sets the two nodes on layer 1 to the values 2 and 3 before they are activated, and returns
 the output. All nodes before the layer being set are set to 0.
 #### Visualizing
 
@@ -120,11 +129,17 @@ import egene
 input_data = [[0, 0], [0, 1], [1, 0], [1, 1]]
 output_data = [[0], [1], [1], [0]]
 
+# 2 inputs, 2 hidden, 1 output
 shape = [2, 2, 1]
-my_species = egene.Species(shape, 1, train_inputs=input_data, train_outputs=output_data,
-                            use_sigmoid=True, pop_size=1000, add_bias_nodes=True)
+
+my_species = egene.Species(shape, 1, train_inputs=input_data, train_outputs=output_data, pop_size=1000)
+
+# Trains for 100 generations
 my_species.train(100)
+
 best_network = my_species.get_best_network()
+
+# Tests the network by giving the input 0, 1
 print(best_network.calico([0, 1]))
 ```
 
@@ -162,7 +177,7 @@ This can easily be tinkered with by changing the training data and shape of the 
         Pass a function. The function must take a network as its first parameter and return the amount of loss. If you want
         to use score instead of loss, just multiply the score by -1 to get the loss so higher scores are a lower loss.
         Within the function you will want to use the network.calico method to pass in inputs and get outputs. Those outputs
-        could control a video game character or anything, so you can figure out how good the network is.
+        could control almost anything.
 
 
 - `initial_weights`:  

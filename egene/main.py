@@ -10,8 +10,6 @@ from pygame import gfxdraw
 
 pygame.init()
 
-gameDisplay = pygame.Surface((10, 10))
-
 black = (0, 0, 0)
 white = (255, 255, 255)
 
@@ -89,7 +87,7 @@ class Species:
         if loss_function is None:
             self.n_inputs = len(train_inputs[0])
             self.n_outputs = len(train_outputs[0])
-            self.loss_function = self.evaluate
+            self.loss_function = self._evaluate
             self.using_custom_loss_function = False
 
         else:
@@ -129,7 +127,7 @@ class Species:
                 self.networks[0].w[v].value = self.initial_weights[v]
 
     @staticmethod
-    def evaluate(p, inputs, output):  # Calculates the loss of a network based on a given input and output set
+    def _evaluate(p, inputs, output):  # Calculates the loss of a network based on a given input and output set
         loss = 0
 
         for active_input_index in range(len(inputs)):
@@ -142,7 +140,7 @@ class Species:
         loss /= len(inputs)  # division for average loss, to account for network with many outputs
         return loss
 
-    def score_all(self, loss_function):  # Evaluates all the networks and puts them in order from best to worst
+    def _score_all(self, loss_function):  # Evaluates all the networks and puts them in order from best to worst
 
         if self.using_custom_loss_function:  # if a custom function is being use
             if self.use_multiprocessing:
@@ -173,12 +171,11 @@ class Species:
 
         self.networks.sort(key=lambda x: x.loss)
 
-    def crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
+    def _crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
         child = Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size)
         num_weights = len(p1.w)
         cross_point = random.randint(0, num_weights - 1)
         orientation = random.choice([(p1, p2), (p2, p1)])  # Determines which parent is first
-
 
         for v in range(len(child.w)):  # Changes every weight
             if v < cross_point:
@@ -188,12 +185,12 @@ class Species:
 
         return child
 
-    def mutate(self, network):  # Adds some random variation to some weights
+    def _mutate(self, network):  # Adds some random variation to some weights
         for w in network.w:
             w.value += random.random() * random.choice([-1, 0, 0, 0, 1]) * self.change_rate
         return network
 
-    def nextgen(self):  # Crosses over and mutates certain networks
+    def _nextgen(self):  # Crosses over and mutates certain networks
         n = 0
         max_index = max(4, int(self.pop_size / 16))  # The worst network index that can still be a parent
 
@@ -207,8 +204,8 @@ class Species:
                 if p1 != p2:
                     break
 
-            self.networks[p] = self.crossover(p1, p2)  # Crosses the parents to produce a child
-            self.networks[p] = self.mutate(self.networks[p])  # Mutates the child based on the change rate
+            self.networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
+            self.networks[p] = self._mutate(self.networks[p])  # Mutates the child based on the change rate
 
         for p in range(int(len(self.networks) * (15 / 16)),
                        len(self.networks)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
@@ -222,7 +219,7 @@ class Species:
 
         for v in range(epochs):
 
-            self.score_all(self.loss_function)
+            self._score_all(self.loss_function)
 
             self.all_lowest_losses.append(self.networks[0].loss)
             if print_progress:
@@ -237,7 +234,7 @@ class Species:
                 all_losses = [a.loss for a in self.networks]
                 print("Avg Loss:", sum(all_losses) / len(all_losses), "Losses:", all_losses)
             self.epochs += 1
-            self.nextgen()
+            self._nextgen()
 
     def get_best_network(self):
         return self.networks[0]
@@ -310,7 +307,7 @@ class Network:
         for v in range(len(self.w)):
             self.w[v].value = weights[v]
 
-    def set_layer_values(self, layer, values):
+    def _set_layer_values(self, layer, values):  # Sets the nodes of a layer to specific values. Used by calico
         for n in self.nodes:
             n.value = 0
 
@@ -320,7 +317,7 @@ class Network:
                 else:
                     n.value = values[n.node]  # Sets the input nodes to their corresponding input
 
-    def feedforward_calculate(self):
+    def _feedforward_calculate(self):  # Starts at input layer and calculates forward
         for active_layer in range(len(self.shape) + 1):
             for n in self.nodes:
                 if n.layer == active_layer:
@@ -331,14 +328,14 @@ class Network:
                 if v.pnode.layer == active_layer:
                     v.tnode.value += v.pnode.value * v.value
 
-    def collect_output_layer(self):
+    def _collect_output_layer(self):  # Takes values of all output nodes and returns it as a list
         outputs = []
         for n in self.nodes:
             if n.layer == len(self.shape) - 1:  # If it is on the output layer
                 outputs.append(n.value)
         return outputs
 
-    def list_internal_values(self):
+    def list_internal_values(self):  # Prints the value of every node and edge
         for n in self.nodes:
             print("Layer: ", n.layer, "| Node: ", n.node, "| Value: ", n.value)
         for we in self.w:
@@ -347,17 +344,17 @@ class Network:
 
     def calico(self, inputs, show_internals=False):  # Using an input and its weights the network returns an output
 
-        self.set_layer_values(0, inputs)  # Sets the input layer to the input values
+        self._set_layer_values(0, inputs)  # Sets the input layer to the input values
 
-        self.feedforward_calculate()
+        self._feedforward_calculate()
 
         if show_internals:
             self.list_internal_values()
 
-        return self.collect_output_layer()
+        return self._collect_output_layer()
 
     def calico_from_hidden_layer(self, layer, values, show_internals=False):  # Starts the feedforward at a different layer
-        self.set_layer_values(layer, values)  # Sets the selected layer to the given values
+        self._set_layer_values(layer, values)  # Sets the selected layer to the given values
 
         for active_layer in range(len(self.shape) + 1):  # Only feed forwards from the starting layer
             if active_layer >= layer:
@@ -370,7 +367,7 @@ class Network:
 
         if show_internals:
             self.list_internal_values()
-        return self.collect_output_layer()
+        return self._collect_output_layer()
 
     class Node:
         def __init__(self, node_type, location, layer, node, use_sigmoid, draw_size):
@@ -429,7 +426,7 @@ class Network:
             # pygame.draw.line(display, black, self.pnode.location, self.tnode.location, width + 2)
             # pygame.draw.line(display, c, self.pnode.location, self.tnode.location, width)
 
-    def show(self):
+    def show(self):  # A list of all weights
         a = []
         for v in self.w:
             a.append(v.value)

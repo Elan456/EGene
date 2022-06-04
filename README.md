@@ -7,21 +7,21 @@ a genetic algorithm
 
 
 + Training a population with any set of training data or loss function
-+ Total control over the size and shape of then nerual network
++ Total control over the size and shape of the neural network
 + Multiprocessing for parallel training
 + Viewing the neural network
 + Pygame surfaces integration
 + Easy use
 
 # Documentation
-+ docs.md
++ DOCS.md
 
 Installation
 ------------
 
-Install $project by running:
+Install EGene by running:
 
-    install project
+    pip install egene
 
 Contribute
 ----------
