@@ -14,7 +14,7 @@ a genetic algorithm
 + Easy use
 
 # Documentation
-+ DOCS.md
++ [DOCS.md](https://github.com/Elan456/EGene/blob/e59734f9f85decdf2c03e574b3802412fb660493/DOCS.md)
 
 Installation
 ------------
