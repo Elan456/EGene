@@ -10,6 +10,9 @@ from pygame import gfxdraw
 
 pygame.init()
 
+pygame.display.set_caption("Network Viewer")
+pygame.display.set_icon(pygame.image.load("Icon.png"))
+
 black = (0, 0, 0)
 white = (255, 255, 255)
 
@@ -436,8 +439,7 @@ class Network:
         display = None  # If independent, this becomes a pygame window
         if independent:
             display = pygame.display.set_mode((self.window_size, self.window_size))
-            pygame.init()
-            pygame.display.set_caption("Network Viewer")
+
 
         surface = pygame.Surface((self.window_size, self.window_size))
         largest_weight = max([abs(v.value) for v in self.w])
