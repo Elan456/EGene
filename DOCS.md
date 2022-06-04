@@ -98,7 +98,7 @@ If you only want the pygame surface returned, set `independent` to `false`.
 
 `show_internals` causes the values of all the nodes and edges to be drawn on top of them.
 
-![XORnetwork](https://github.com/Elan456/PyGene/blob/develop/PyGene/XORexample.png?raw=true)
+![XORnetwork](https://github.com/Elan456/PyGene/blob/develop/XORexample.png?raw=true)
 
 The different colors matter:
 
