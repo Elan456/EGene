@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="EGene",
-    version="0.1.2",
+    version="0.1.5",
     author="Ethan Anderson",
     author_email="telan4892@gmail.com",
     url="https://github.com/Elan456/EGene",
@@ -10,4 +10,6 @@ setup(
     packages=["egene"],
     license="MIT",
     description="Tool for applying, visualizing, and training neural networks using a genetic algorithm",
+
+    package_data={"": ["images/Icon.png"]}
 )

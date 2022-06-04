@@ -2,16 +2,17 @@ import copy
 import random
 import math
 import egene.pygameTools as pgt
-
+import pkg_resources
 from multiprocessing import Pool
 
 import pygame
 from pygame import gfxdraw
 
-pygame.init()
+icon = pkg_resources.resource_stream(__name__, 'images/Icon.png')
 
+pygame.init()
 pygame.display.set_caption("Network Viewer")
-pygame.display.set_icon(pygame.image.load("Icon.png"))
+pygame.display.set_icon(pygame.image.load(icon))
 
 black = (0, 0, 0)
 white = (255, 255, 255)
