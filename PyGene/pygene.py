@@ -82,7 +82,6 @@ class Species:
         self.window_size = native_window_size
 
         self.epochs = 0  # Count of all epochs every trained on this species
-        self.lowest_lost = float("inf")
         self.all_lowest_losses = []  # All the lowest losses for each epoch
 
         if loss_function is None and train_inputs is None:
@@ -124,7 +123,6 @@ class Species:
 
         for p in range(pop_size):  # Creating first generation of networks
             self.networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
-        print("--First networks made")
         # Giving the first network the initial weights
         if self.initial_weights is not None and self.set_all_zero is False:
             for v in range(len(self.networks[0].w)):
@@ -220,22 +218,24 @@ class Species:
             self.networks[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.change_rate + p1.w[
                 w_index].value
 
-    def train(self, epochs, show_pop=False):
+    def train(self, epochs, print_progress=True, print_population_losses=False):
 
         for v in range(epochs):
 
             self.score_all(self.loss_function)
 
             self.all_lowest_losses.append(self.networks[0].loss)
-            print("\n", self.epochs, ":", "loss:", self.networks[0].loss, self.networks[0].show())
+            if print_progress:
+                print("\n", self.epochs, ":", "loss:", self.networks[0].loss, "Weights:", self.networks[0].show())
             if len(self.all_lowest_losses) > 4 and self.can_change_change_rate:  # We must be at least 4 generations in
                 if self.all_lowest_losses[self.epochs - 4] == self.all_lowest_losses[self.epochs]:  # No change
                     self.change_rate /= 2
-                    print("--\nNo change from 4 gens ago so change_rate is being lowered to", self.change_rate, "\n--")
+                    if print_progress:
+                        print("--\nNo change from 4 gens ago so change_rate is being lowered to", self.change_rate, "\n--")
 
-            if show_pop:
+            if print_population_losses:
                 all_losses = [a.loss for a in self.networks]
-                print("Avg:", sum(all_losses) / len(all_losses), "Losses:", all_losses)
+                print("Avg Loss:", sum(all_losses) / len(all_losses), "Losses:", all_losses)
             self.epochs += 1
             self.nextgen()
 
@@ -271,8 +271,8 @@ class Network:
                 layer_size = self.shape[active_layer]
             for n in range(layer_size):  # Each node in the layer +1 for bias:
                 if not (n == self.shape[active_layer] and active_layer == len(self.shape) - 1):  # Prevents bias on output layer
-                    y_scale = self.window_size / layer_size
-                    y = int(n * y_scale + (y_scale/2))
+                    y_scale = (self.window_size - 50) / layer_size
+                    y = int(n * y_scale + (y_scale/2) + 25)
                     if active_layer == 0:
                         node_type = "input"
                     elif active_layer == len(self.shape) - 1:
