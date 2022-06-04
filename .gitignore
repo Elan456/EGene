@@ -1,6 +1,6 @@
 .idea/
-PyGene/.idea/
-PyGene/__pycache__/
+pygene/.idea/
+pygene/__pycache__/
 __pycache__/
 main.py
 tictactoeobject
