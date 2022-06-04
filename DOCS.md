@@ -1,4 +1,4 @@
-# PyGene Documentation
+# EGene Documentation
 
 ## XOR Example
 
@@ -98,7 +98,7 @@ If you only want the pygame surface returned, set `independent` to `false`.
 
 `show_internals` causes the values of all the nodes and edges to be drawn on top of them.
 
-![XORnetwork](https://github.com/Elan456/PyGene/blob/develop/XORexample.png?raw=true)
+![XORnetwork](https://github.com/Elan456/EGene/blob/develop/XORexample.png?raw=true)
 
 The different colors matter:
 
@@ -115,13 +115,13 @@ Red: Negative values
 ## Full XOR Example Without Any Visualizations
 
 ```
-import pygene
+import egene
 
 input_data = [[0, 0], [0, 1], [1, 0], [1, 1]]
 output_data = [[0], [1], [1], [0]]
 
 shape = [2, 2, 1]
-my_species = pygene.Species(shape, 1, train_inputs=input_data, train_outputs=output_data,
+my_species = egene.Species(shape, 1, train_inputs=input_data, train_outputs=output_data,
                             use_sigmoid=True, pop_size=1000, add_bias_nodes=True)
 my_species.train(100)
 best_network = my_species.get_best_network()

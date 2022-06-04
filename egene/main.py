@@ -1,7 +1,7 @@
 import copy
 import random
 import math
-import pygene.pygameTools as pgt
+import egene.pygameTools as pgt
 
 from multiprocessing import Pool
 

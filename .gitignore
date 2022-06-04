@@ -1,6 +1,6 @@
 .idea/
-pygene/.idea/
-pygene/__pycache__/
+egene/.idea/
+egene/__pycache__/
 __pycache__/
 tictactoeobject
 tictactry.py

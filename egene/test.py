@@ -1,4 +1,4 @@
-import pygene
+import egene
 import pygame
 import pygameTools as pgt
 
@@ -12,8 +12,8 @@ ins = [[0, 0], [0, 1], [1, 0], [1, 1]]
 outs = [[0], [1], [1], [0]]
 
 # Creating the species
-guide = pygene.Species([2, 2, 1], train_inputs=ins, train_outputs=outs, use_sigmoid=True, pop_size=1000, add_bias_nodes=True,
-                       native_window_size=window_size)
+guide = egene.Species([2, 2, 1], train_inputs=ins, train_outputs=outs, use_sigmoid=True, pop_size=1000, add_bias_nodes=True,
+                      native_window_size=window_size)
 for _ in range(100):  # if you break up the training to one at a time you can see the network change over time.
     guide.train(1)
     for event in pygame.event.get():

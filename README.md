@@ -1,16 +1,17 @@
-# PyGene
+# EGene
 
-Tool for training and applying neural networks using 
-a genetic algorithum
+Tool for applying, visualizing, and training neural networks using 
+a genetic algorithm
 
 # Features
 
 
 + Training a population with any set of training data or loss function
-+ Multiprocessing
-+ Easy use
++ Total control over the size and shape of then nerual network
++ Multiprocessing for parallel training
 + Viewing the neural network
 + Pygame surfaces integration
++ Easy use
 
 # Documentation
 + docs.md
