@@ -73,7 +73,7 @@ def custom_eval(t):
 
 
 class Species:
-    def __init__(self, shape, initial_change_rate=1, pop_size=32, train_inputs=None, train_outputs=None, loss_function=None,
+    def __init__(self, shape, train_inputs=None, train_outputs=None, initial_change_rate=1, pop_size=32, loss_function=None,
                  initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True,
                  use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
         self.use_multiprocessing = use_multiprocessing
@@ -439,6 +439,8 @@ class Network:
     def draw(self, show_internals=False, independent=False):
         display = None  # If independent, this becomes a pygame window
         if independent:
+            # Reinitiating the font
+            pygame.font.init()
             display = pygame.display.set_mode((self.window_size, self.window_size))
 
 
