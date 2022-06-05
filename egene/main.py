@@ -436,7 +436,7 @@ class Network:
             a.append(v.value)
         return a
 
-    def draw(self, show_internals=False, independent=False):
+    def draw(self, independent=False, show_internals=True):
         display = None  # If independent, this becomes a pygame window
         if independent:
             # Reinitiating the font
