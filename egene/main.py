@@ -256,14 +256,14 @@ class Network:
         self.nodes = []
         x_scale = self.window_size / len(self.shape)
         x_start = x_scale / 2
-        layer_starts = []  # Keeps track of where each layer starts so weights are created faster
+        self.layer_starts = []  # Keeps track of where each layer starts so weights are created faster
 
         # Determining the radius of the nodes when drawn, so they all fit
         self.node_draw_size = min(int((self.window_size - 50) / max(self.shape) / 2.2), int(x_scale / 5))
 
         # Node Creation
         for active_layer in range(len(self.shape)):  # Each layer
-            layer_starts.append(len(self.nodes))
+            self.layer_starts.append(len(self.nodes))
             x = int(active_layer * x_scale + x_start)
 
             if add_bias_nodes and active_layer != len(self.shape) - 1:  # Prevents bias on output layer
@@ -273,7 +273,7 @@ class Network:
             for n in range(layer_size):  # Each node in the layer +1 for bias:
                 if not (n == self.shape[active_layer] and active_layer == len(self.shape) - 1):  # Prevents bias on output layer
                     y_scale = (self.window_size - 50) / layer_size
-                    y = int(n * y_scale + (y_scale/2) + 25)
+                    y = int(n * y_scale + (y_scale / 2) + 25)
                     if active_layer == 0:
                         node_type = "input"
                     elif active_layer == len(self.shape) - 1:
@@ -285,13 +285,13 @@ class Network:
                         node_type = "bias"  # Overrides other types
                     self.nodes.append(Network.Node(node_type, (x, y), active_layer, n, self.use_sigmoid, self.node_draw_size))
 
-        layer_starts.append(len(self.nodes))
+        self.layer_starts.append(len(self.nodes))
         things_checked = 0
         self.w = []
         for n in self.nodes:
-            if n.layer != len(layer_starts) - 2:
-                for target_index in range(layer_starts[n.layer + 1],
-                                          layer_starts[n.layer + 2]):  # All nodes ahead in index are checked
+            if n.layer != len(self.layer_starts) - 2:
+                for target_index in range(self.layer_starts[n.layer + 1],
+                                          self.layer_starts[n.layer + 2]):  # All nodes ahead in index are checked
                     things_checked += 1
                     t = self.nodes[target_index]
 
@@ -307,6 +307,11 @@ class Network:
                             pass
         self.w.sort(key=lambda x: x.pnode.layer)
 
+        self.w_by_layer = [[] for _ in range(len(self.shape) - 1)]  # Organzing the weights by layer
+
+        for v in self.w:
+            self.w_by_layer[v.pnode.layer].append(v)  # These weights should still update by reference
+
     def set_weights(self, weights):
         for v in range(len(self.w)):
             self.w[v].value = weights[v]
@@ -314,30 +319,26 @@ class Network:
     def _set_layer_values(self, layer, values):  # Sets the nodes of a layer to specific values. Used by calico
         for n in self.nodes:
             n.value = 0
-
-            if n.layer == layer:  # If it is on the selected layer
-                if n.node == self.shape[layer]:  # Checks if the node is the bias node
-                    n.value = 1
-                else:
-                    n.value = values[n.node]  # Sets the input nodes to their corresponding input
+        for n in self.nodes[self.layer_starts[layer]: self.layer_starts[layer+1]]:
+            if n.node == self.shape[layer]:  # Checks if the node is the bias node
+                n.value = 1
+            else:
+                n.value = values[n.node]  # Sets the input nodes to their corresponding input
 
     def _feedforward_calculate(self):  # Starts at input layer and calculates forward
-        for active_layer in range(len(self.shape) + 1):
-            for n in self.nodes:
-                if n.layer == active_layer:
-                    n.value = n.activation_function(n.value)
+        for active_layer in range(len(self.shape) - 1):
+
+            for n in self.nodes[self.layer_starts[active_layer]: self.layer_starts[active_layer+1]]:
+                n.value = n.activation_function(n.value)
                 if n.type == "bias":
                     n.value = 1
-            for v in self.w:
-                if v.pnode.layer == active_layer:
-                    v.tnode.value += v.pnode.value * v.value
+
+            for v in self.w_by_layer[active_layer]:
+                v.tnode.value += v.pnode.value * v.value
+
 
     def _collect_output_layer(self):  # Takes values of all output nodes and returns it as a list
-        outputs = []
-        for n in self.nodes:
-            if n.layer == len(self.shape) - 1:  # If it is on the output layer
-                outputs.append(n.value)
-        return outputs
+        return [self.nodes[n].value for n in range(len(self.nodes) - self.shape[-1], len(self.nodes))]
 
     def list_internal_values(self):  # Prints the value of every node and edge
         for n in self.nodes:
@@ -442,7 +443,6 @@ class Network:
             # Reinitiating the font
             pygame.font.init()
             display = pygame.display.set_mode((self.window_size, self.window_size))
-
 
         surface = pygame.Surface((self.window_size, self.window_size))
         largest_weight = max([abs(v.value) for v in self.w])
