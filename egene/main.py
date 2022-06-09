@@ -57,11 +57,11 @@ def duplicate_checker(x):
     :param x: A list
     :return: True or False
     """
-    uniquevalues = []
+    unique_values = []
 
     for v in x:
-        if v not in uniquevalues:
-            uniquevalues.append(v)
+        if v not in unique_values:
+            unique_values.append(v)
         else:
             return True
     return False
@@ -174,6 +174,14 @@ class Species:
                 p.loss = loss_function(p, ins, outs)
 
         self.networks.sort(key=lambda x: x.loss)
+
+    def soft_restart(self):  # Resets all networks except the best one
+        best = self.get_best_network()
+        self.networks = []
+        for p in range(self.pop_size):  # Creating first generation of networks
+            self.networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
+        # Giving the first network the previous best weights
+        self.networks[0] = best
 
     def _crossover(self, p1, p2):  # Crosses the weights of two parents to get a new child
         child = Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size)
@@ -307,7 +315,7 @@ class Network:
                             pass
         self.w.sort(key=lambda x: x.pnode.layer)
 
-        self.w_by_layer = [[] for _ in range(len(self.shape) - 1)]  # Organzing the weights by layer
+        self.w_by_layer = [[] for _ in range(len(self.shape) - 1)]  # Organizing the weights by layer
 
         for v in self.w:
             self.w_by_layer[v.pnode.layer].append(v)  # These weights should still update by reference
@@ -440,7 +448,7 @@ class Network:
     def draw(self, independent=False, show_internals=True):
         display = None  # If independent, this becomes a pygame window
         if independent:
-            # Reinitiating the font
+            # Reinitializing the font
             pygame.font.init()
             display = pygame.display.set_mode((self.window_size, self.window_size))
 

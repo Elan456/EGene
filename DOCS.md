@@ -26,7 +26,7 @@ Although, hidden layers are needed to solve XOR, so our shape will be `[2, 2, 1]
 
 ### Creating the species
 ```
-my_species = pygene.Species(shape, train_inputs=input_data, train_outputs=output_data, use_sigmoid=True, pop_size=1000, add_bias_nodes=True)                       
+MY_SPECIES = pygene.Species(shape, train_inputs=input_data, train_outputs=output_data, use_sigmoid=True, pop_size=1000, add_bias_nodes=True)                       
 ```
 
 The `use_sigmoid` parameter is `True` because the sigmoid activation function is needed on
@@ -41,7 +41,7 @@ more often than not.
 
 ### Training the species
 
-`my_species.train(100)`
+`MY_SPECIES.train(100)`
 
 This will train the species for 100 generations.
 To see how the network changes over time, break the training
@@ -69,6 +69,15 @@ The `for` loop still trains the species for 100 generations, but you can now *se
 the network is being visualized between each generation.
 If the networks are playing a game, you could show the best one playing between
 training if you wanted.
+
+#### Soft Restart
+
+After training your species for a while, you may want to start from scratch in hopes that
+the networks converge somewhere else.
+
+`MY_SPECIES.soft_restart()`
+
+This resets every network to random values except for the best network.
 
 ### Using your trained network
 #### Getting the best network
@@ -132,7 +141,7 @@ output_data = [[0], [1], [1], [0]]
 # 2 inputs, 2 hidden, 1 output
 shape = [2, 2, 1]
 
-my_species = egene.Species(shape, 1, train_inputs=input_data, train_outputs=output_data, pop_size=1000)
+my_species = egene.Species(shape, input_data, output_data, pop_size=1000)
 
 # Trains for 100 generations
 my_species.train(100)
