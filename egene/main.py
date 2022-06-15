@@ -244,7 +244,8 @@ class Species:
 
             if print_population_losses:
                 all_losses = [a.loss for a in self.networks]
-                print("Avg Loss:", sum(all_losses) / len(all_losses), "Losses:", all_losses)
+                print("Mean Loss:   ", sum(all_losses) / len(all_losses), "Losses:", all_losses)
+                print("Median Loss: ", all_losses[len(all_losses) // 2])
             self.epochs += 1
             self._nextgen()
 

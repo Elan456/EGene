@@ -8,7 +8,7 @@ print(LONG_DESCRIPTION)
 
 setup(
     name="EGene",
-    version="0.1.6",
+    version="0.2.0",
     author="Ethan Anderson",
     author_email="telan4892@gmail.com",
     url="https://github.com/Elan456/EGene",
