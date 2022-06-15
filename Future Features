@@ -1,0 +1,4 @@
+Show median loss for print_population_progress in Species.train
+More intelligent parent picking for crossing over. Give better parents a higher probability of mating
+Population loss distribution histogram
+Disable pygame message
