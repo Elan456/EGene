@@ -4,9 +4,13 @@ import math
 import egene.pygameTools as pgt
 import pkg_resources
 from multiprocessing import Pool
+import statistics as stat
 
 import pygame
 from pygame import gfxdraw
+import os
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
 icon = pkg_resources.resource_stream(__name__, 'images/Icon.png')
 
@@ -85,6 +89,8 @@ class Species:
 
         self.epochs = 0  # Count of all epochs every trained on this species
         self.all_lowest_losses = []  # All the lowest losses for each epoch
+
+        self.gens_since_change_change_rate = 0
 
         if loss_function is None and train_inputs is None:
             raise CustomError("Species needs either a list of inputs and outputs or a loss_function")
@@ -173,7 +179,7 @@ class Species:
             for p in self.networks:
                 p.loss = loss_function(p, ins, outs)
 
-        self.networks.sort(key=lambda x: x.loss)
+        self.networks.sort(key=lambda x: x.loss)  # Sorting them from best to worst
 
     def soft_restart(self):  # Resets all networks except the best one
         best = self.get_best_network()
@@ -204,31 +210,51 @@ class Species:
 
     def _nextgen(self):  # Crosses over and mutates certain networks
         n = 0
-        max_index = max(4, int(self.pop_size / 16))  # The worst network index that can still be a parent
+        #print("Weights of best befor:", self.networks[0].show())
+        average_loss = sum([n.loss for n in self.networks]) / len(self.networks)
+        stdv_loss = stat.pstdev([n.loss for n in self.networks])
 
-        for p in range(len(self.networks) // 16, len(self.networks)):  # Only the worst 15/16 are changed
+        # Calculating z scores for a fairer compairisons
+        # All networks with a negative z score (meaning they are better than the average) will be eligible as a parent
+        # The chance of a network being a parent will be related to
+        # what proportion their negative z score makes of all negative z scores.
 
-            n += 1
-            while True:  # Choosing the two parents
-                p1 = self.networks[random.randint(0, max_index)]
-                p2 = self.networks[random.randint(0, max_index)]
+        sum_of_negative_z_scores = 0
+        for n in self.networks:
+            n.z_score = (n.loss - average_loss) / stdv_loss
+            if n.z_score < 0:
+                sum_of_negative_z_scores += n.z_score
 
-                if p1 != p2:
-                    break
+        # Getting what proportion each network with a negative z scores makes of the sum of the negative z scores
+        parents = []
+        for n in self.networks:
+            if n.z_score < 0:
+                n.parent_chance = n.z_score / sum_of_negative_z_scores
+                parents.append(n)  # Adds the network to the list of parents
+            else:  # All networks after the first network with a non-negative z score will be non-negative
+                break
 
-            self.networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
-            self.networks[p] = self._mutate(self.networks[p])  # Mutates the child based on the change rate
+        # Creating the new generation as a blank slate
+        # This may be slow
+        new_networks = []
+        for p in range(self.pop_size):  # Creating first generation of networks
+            new_networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
 
-        for p in range(int(len(self.networks) * (15 / 16)),
-                       len(self.networks)):  # Last 16th are just asexual mutants of the best 16th only one weight is changed
-            p1 = self.networks[random.randint(0, max_index)]
-            w_index = random.randint(0, len(self.networks[0].w) - 1)
-            self.networks[p].w = copy.deepcopy(p1.w)
-            self.networks[p].w[w_index].value = random.choice([-1, 1]) * random.random() * self.change_rate + p1.w[
-                w_index].value
+        for p in range(len(new_networks)):
+            p1, p2 = random.choices(parents, [p.parent_chance for p in parents], k=2)
+            #print(p1.parent_chance, p2.parent_chance)
+            # It is possible for identical parents to occur
+
+            new_networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
+            new_networks[p] = self._mutate(new_networks[p])  # Mutates the child based on the change rate
+
+        # Sets the weights of the old networks to that of the corresponding new network
+        for i in range(1, len(self.networks)):  # The best network is left unchanged
+            self.networks[i].set_weights(new_networks[i].show())
+        #print("Weights of best after:", self.networks[0].show())
 
     def train(self, epochs, print_progress=True, print_population_losses=False):
-
+        self.gens_since_change_change_rate += 1
         for v in range(epochs):
 
             self._score_all(self.loss_function)
@@ -236,11 +262,12 @@ class Species:
             self.all_lowest_losses.append(self.networks[0].loss)
             if print_progress:
                 print("\n", self.epochs, ":", "loss:", self.networks[0].loss, "Weights:", self.networks[0].show())
-            if len(self.all_lowest_losses) > 4 and self.can_change_change_rate:  # We must be at least 4 generations in
+            if len(self.all_lowest_losses) > 4 and self.can_change_change_rate and self.gens_since_change_change_rate > 4:  # We must be at least 4 generations in
                 if self.all_lowest_losses[self.epochs - 4] == self.all_lowest_losses[self.epochs]:  # No change
                     self.change_rate /= 2
                     if print_progress:
                         print("--\nNo change from 4 gens ago so change_rate is being lowered to", self.change_rate, "\n--")
+                        self.gens_since_change_change_rate = 0
 
             if print_population_losses:
                 all_losses = [a.loss for a in self.networks]
@@ -260,6 +287,7 @@ class Network:
         self.set_all_zero = set_all_zero
         self.shape = shape
         self.window_size = window_size
+        self.parent_chance = 0
 
         # Initiate nodes ------------
         self.nodes = []
@@ -392,6 +420,7 @@ class Network:
             self.node = node
             self.value = 0
             self.draw_size = draw_size
+
 
             if self.type == "hidden":
                 if not use_sigmoid:
