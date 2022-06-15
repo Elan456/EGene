@@ -1,4 +1,3 @@
-import copy
 import random
 import math
 import egene.pygameTools as pgt
@@ -91,6 +90,9 @@ class Species:
         self.all_lowest_losses = []  # All the lowest losses for each epoch
 
         self.gens_since_change_change_rate = 0
+
+        self.median_loss = None
+        self.mean_loss = None
 
         if loss_function is None and train_inputs is None:
             raise CustomError("Species needs either a list of inputs and outputs or a loss_function")
@@ -209,12 +211,10 @@ class Species:
         return network
 
     def _nextgen(self):  # Crosses over and mutates certain networks
-        n = 0
-        #print("Weights of best befor:", self.networks[0].show())
         average_loss = sum([n.loss for n in self.networks]) / len(self.networks)
-        stdv_loss = stat.pstdev([n.loss for n in self.networks])
+        stdv_loss = stat.pstdev([n.loss for n in self.networks])  # Population standard deviation of losses
 
-        # Calculating z scores for a fairer compairisons
+        # Calculating z scores for a fairer comparisons
         # All networks with a negative z score (meaning they are better than the average) will be eligible as a parent
         # The chance of a network being a parent will be related to
         # what proportion their negative z score makes of all negative z scores.
@@ -242,7 +242,6 @@ class Species:
 
         for p in range(len(new_networks)):
             p1, p2 = random.choices(parents, [p.parent_chance for p in parents], k=2)
-            #print(p1.parent_chance, p2.parent_chance)
             # It is possible for identical parents to occur
 
             new_networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
@@ -251,7 +250,6 @@ class Species:
         # Sets the weights of the old networks to that of the corresponding new network
         for i in range(1, len(self.networks)):  # The best network is left unchanged
             self.networks[i].set_weights(new_networks[i].show())
-        #print("Weights of best after:", self.networks[0].show())
 
     def train(self, epochs, print_progress=True, print_population_losses=False):
         self.gens_since_change_change_rate += 1
@@ -271,8 +269,10 @@ class Species:
 
             if print_population_losses:
                 all_losses = [a.loss for a in self.networks]
-                print("Mean Loss:   ", sum(all_losses) / len(all_losses), "Losses:", all_losses)
-                print("Median Loss: ", all_losses[len(all_losses) // 2])
+                self.mean_loss = sum(all_losses) / len(all_losses)
+                self.median_loss = all_losses[len(all_losses) // 2]
+                print("Mean Loss:   ", self.mean_loss)
+                print("Median Loss: ", self.median_loss)
             self.epochs += 1
             self._nextgen()
 
@@ -281,6 +281,7 @@ class Species:
 
 
 class Network:
+    # noinspection PyTypeChecker
     def __init__(self, shape, use_sigmoid, add_bias_nodes, window_size, set_all_zero=False):
         self.loss = 0
         self.use_sigmoid = use_sigmoid
@@ -345,7 +346,6 @@ class Network:
         self.w.sort(key=lambda x: x.pnode.layer)
 
         self.w_by_layer = [[] for _ in range(len(self.shape) - 1)]  # Organizing the weights by layer
-
         for v in self.w:
             self.w_by_layer[v.pnode.layer].append(v)  # These weights should still update by reference
 
@@ -356,7 +356,7 @@ class Network:
     def _set_layer_values(self, layer, values):  # Sets the nodes of a layer to specific values. Used by calico
         for n in self.nodes:
             n.value = 0
-        for n in self.nodes[self.layer_starts[layer]: self.layer_starts[layer+1]]:
+        for n in self.nodes[self.layer_starts[layer]: self.layer_starts[layer + 1]]:
             if n.node == self.shape[layer]:  # Checks if the node is the bias node
                 n.value = 1
             else:
@@ -365,14 +365,13 @@ class Network:
     def _feedforward_calculate(self):  # Starts at input layer and calculates forward
         for active_layer in range(len(self.shape) - 1):
 
-            for n in self.nodes[self.layer_starts[active_layer]: self.layer_starts[active_layer+1]]:
+            for n in self.nodes[self.layer_starts[active_layer]: self.layer_starts[active_layer + 1]]:
                 n.value = n.activation_function(n.value)
                 if n.type == "bias":
                     n.value = 1
 
             for v in self.w_by_layer[active_layer]:
                 v.tnode.value += v.pnode.value * v.value
-
 
     def _collect_output_layer(self):  # Takes values of all output nodes and returns it as a list
         return [self.nodes[n].value for n in range(len(self.nodes) - self.shape[-1], len(self.nodes))]
@@ -420,7 +419,6 @@ class Network:
             self.node = node
             self.value = 0
             self.draw_size = draw_size
-
 
             if self.type == "hidden":
                 if not use_sigmoid:
