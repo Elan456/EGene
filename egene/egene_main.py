@@ -1,6 +1,6 @@
 import random
 import math
-import pygameTools as pgt
+import egene.pygameTools as pgt
 import pkg_resources
 from multiprocessing import Pool
 import statistics as stat
