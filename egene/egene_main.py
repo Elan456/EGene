@@ -1,6 +1,6 @@
 import random
 import math
-import egene.pygameTools as pgt
+import pygameTools as pgt
 import pkg_resources
 from multiprocessing import Pool
 import statistics as stat
@@ -152,6 +152,17 @@ class Species:
         loss /= len(inputs)  # division for average loss, to account for network with many outputs
         return loss
 
+    def _assign_results_to_networks(self, results):
+
+        if len(results[0]) == 1:  # No extra data given
+            for a in range(len(self.networks)):
+                self.networks[a].loss = results[a]
+        elif len(results[0]) == 2:  # One extra return
+            for a in range(len(self.networks)):
+                self.networks[a].loss, self.networks[a].extra_data = results[a]
+        else:
+            CustomError("Too many values returned from loss function. Only one extra value is allowed as Network.extra_data")
+
     def _score_all(self, loss_function):  # Evaluates all the networks and puts them in order from best to worst
 
         if self.using_custom_loss_function:  # if a custom function is being use
@@ -160,14 +171,14 @@ class Species:
                 p = Pool()
                 for a in self.networks:
                     data.append((self.loss_function, a))
-
                 results = p.map(custom_eval, data)
 
-                for a in range(len(self.networks)):
-                    self.networks[a].loss = results[a]
             else:
+                results = []
                 for a in range(len(self.networks)):
-                    self.networks[a].loss = self.loss_function(self.networks[a])
+                    results.append(self.loss_function(self.networks[a]))
+
+            self._assign_results_to_networks(results)
         else:  # If a list of inputs and outputs are being used for training
             inout = []  # List of tuples with each tuple having input, output
             for i in range(len(self.train_inputs)):
@@ -289,6 +300,8 @@ class Network:
         self.shape = shape
         self.window_size = window_size
         self.parent_chance = 0
+
+        self.extra_data = None  # Used for returning replay or any other data from the loss function
 
         # Initiate nodes ------------
         self.nodes = []

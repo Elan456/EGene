@@ -1,1 +1,1 @@
-from egene.main import *
+from egene.egene_main import *
