@@ -78,18 +78,21 @@ def custom_eval(t):
 class Species:
     def __init__(self, shape, train_inputs=None, train_outputs=None, initial_change_rate=1, pop_size=32, loss_function=None,
                  initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True,
-                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
+                 use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500,
+                 min_gens_before_change_change_rate=4):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
         self.can_change_change_rate = can_change_change_rate
         self.set_all_zero = set_all_zero
         self.add_bias_nodes = add_bias_nodes
         self.window_size = native_window_size
+        self.min_gens_before_change_change_rate = min_gens_before_change_change_rate
 
         self.epochs = 0  # Count of all epochs every trained on this species
         self.all_lowest_losses = []  # All the lowest losses for each epoch
 
         self.gens_since_change_change_rate = 0
+        print("Set to Zero")
 
         self.median_loss = None
         self.mean_loss = None
@@ -153,8 +156,7 @@ class Species:
         return loss
 
     def _assign_results_to_networks(self, results):
-
-        if len(results[0]) == 1:  # No extra data given
+        if type(results[0]) is not tuple:  # No extra data given
             for a in range(len(self.networks)):
                 self.networks[a].loss = results[a]
         elif len(results[0]) == 2:  # One extra return
@@ -171,6 +173,7 @@ class Species:
                 p = Pool()
                 for a in self.networks:
                     data.append((self.loss_function, a))
+                print(custom_eval, data)
                 results = p.map(custom_eval, data)
 
             else:
@@ -263,16 +266,17 @@ class Species:
             self.networks[i].set_weights(new_networks[i].show())
 
     def train(self, epochs, print_progress=True, print_population_losses=False):
-        self.gens_since_change_change_rate += 1
+        mgb = self.min_gens_before_change_change_rate  # To reduce character count
         for v in range(epochs):
-
+            self.gens_since_change_change_rate += 1
             self._score_all(self.loss_function)
 
             self.all_lowest_losses.append(self.networks[0].loss)
             if print_progress:
                 print("\n", self.epochs, ":", "loss:", self.networks[0].loss, "Weights:", self.networks[0].show())
-            if len(self.all_lowest_losses) > 4 and self.can_change_change_rate and self.gens_since_change_change_rate > 4:  # We must be at least 4 generations in
-                if self.all_lowest_losses[self.epochs - 4] == self.all_lowest_losses[self.epochs]:  # No change
+            print(len(self.all_lowest_losses) > mgb, self.can_change_change_rate, self.gens_since_change_change_rate > mgb, self.gens_since_change_change_rate)
+            if len(self.all_lowest_losses) > mgb and self.can_change_change_rate and self.gens_since_change_change_rate > mgb:  # We must be at least 4 generations in
+                if self.all_lowest_losses[self.epochs - mgb] == self.all_lowest_losses[self.epochs]:  # No change
                     self.change_rate /= 2
                     if print_progress:
                         print("--\nNo change from 4 gens ago so change_rate is being lowered to", self.change_rate, "\n--")
@@ -397,6 +401,8 @@ class Network:
                   "| Value:", we.value)
 
     def calico(self, inputs, show_internals=False):  # Using an input and its weights the network returns an output
+        if type(inputs) is not list:
+            raise CustomError("Calico input is not a list")
 
         self._set_layer_values(0, inputs)  # Sets the input layer to the input values
 
