@@ -157,8 +157,7 @@ class Species:
         return loss
 
     def _assign_results_to_networks(self, results):
-
-        if len(results[0]) == 1:  # No extra data given
+        if type(results[0]) is not tuple:  # No extra data given
             for a in range(len(self.networks)):
                 self.networks[a].loss = results[a]
         elif len(results[0]) == 2:  # One extra return
@@ -412,6 +411,8 @@ class Network:
                   "| Value:", we.value)
 
     def calico(self, inputs, show_internals=False):  # Using an input and its weights the network returns an output
+        if type(inputs) is not list:
+            raise CustomError("Calico input is not a list")
 
         self._set_layer_values(0, inputs)  # Sets the input layer to the input values
 
