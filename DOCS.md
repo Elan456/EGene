@@ -206,7 +206,12 @@ This can easily be tinkered with by changing the training data and shape of the 
 
 
 - `can_change_changerate`:  
-        Whether the program will halve the change_rate when there is no change in loss after 4 generation.
+        Whether the program will halve the `change_rate` when there is no change in loss after some many generation.
+
+
+- `noctcc`:
+        How many generations in a row the same loss must be gotten before the `change_rate` is halved. If
+        your species seems to be convergering too early, try raising this number. 
 
 
 - `use_multiprocessing`:  

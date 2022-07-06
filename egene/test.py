@@ -13,7 +13,7 @@ outs = [[0], [1], [1], [0]]
 
 # Creating the species
 guide = egene.Species([2, 2, 1], train_inputs=ins, train_outputs=outs, use_sigmoid=True, pop_size=100, add_bias_nodes=True,
-                      native_window_size=window_size)
+                      native_window_size=window_size, noctcc=15)
 for _ in range(1000):  # if you break up the training to one at a time you can see the network change over time.
     guide.train(1, print_population_losses=True)
     for event in pygame.event.get():

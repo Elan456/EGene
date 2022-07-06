@@ -9,6 +9,9 @@ import pygame
 from pygame import gfxdraw
 import os
 
+# Libraries for colored console output
+from colorama import Fore
+
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
 icon = pkg_resources.resource_stream(__name__, 'images/Icon.png')
@@ -77,7 +80,7 @@ def custom_eval(t):
 
 class Species:
     def __init__(self, shape, train_inputs=None, train_outputs=None, initial_change_rate=1, pop_size=32, loss_function=None,
-                 initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True,
+                 initial_weights=None, data_per_gen=None, use_sigmoid=True, can_change_change_rate=True, noctcc=4,
                  use_multiprocessing=True, set_all_zero=False, add_bias_nodes=True, native_window_size=500):
         self.use_multiprocessing = use_multiprocessing
         self.use_sigmoid = use_sigmoid
@@ -85,6 +88,7 @@ class Species:
         self.set_all_zero = set_all_zero
         self.add_bias_nodes = add_bias_nodes
         self.window_size = native_window_size
+        self.no_changes_till_change_change_rate = noctcc
 
         self.epochs = 0  # Count of all epochs every trained on this species
         self.all_lowest_losses = []  # All the lowest losses for each epoch
@@ -224,43 +228,51 @@ class Species:
     def _nextgen(self):  # Crosses over and mutates certain networks
         average_loss = sum([n.loss for n in self.networks]) / len(self.networks)
         stdv_loss = stat.pstdev([n.loss for n in self.networks])  # Population standard deviation of losses
+        if stdv_loss == 0 and self.can_change_change_rate:
+            print(Fore.YELLOW + "--\nThere is no variance amongst the population, raising change rate\n--")
+            self.change_rate *= 8
+            for n in range(len(self.networks) // 2, len(self.networks)):
+                self.networks[n] = self._mutate(self.networks[n])
+        elif stdv_loss == 0 and self.can_change_change_rate is False:
+            print(Fore.YELLOW + "--\nThere is no variance amongst the population, but cannot raise change rate\n--")
+        else:
+            # Calculating z scores for a fairer comparisons
+            # All networks with a negative z score (meaning they are better than the average) will be eligible as a parent
+            # The chance of a network being a parent will be related to
+            # what proportion their negative z score makes of all negative z scores.
 
-        # Calculating z scores for a fairer comparisons
-        # All networks with a negative z score (meaning they are better than the average) will be eligible as a parent
-        # The chance of a network being a parent will be related to
-        # what proportion their negative z score makes of all negative z scores.
+            sum_of_negative_z_scores = 0
+            for n in self.networks:
+                # Calculating Z scores
+                n.z_score = (n.loss - average_loss) / stdv_loss
+                if n.z_score < 0:
+                    sum_of_negative_z_scores += n.z_score
 
-        sum_of_negative_z_scores = 0
-        for n in self.networks:
-            n.z_score = (n.loss - average_loss) / stdv_loss
-            if n.z_score < 0:
-                sum_of_negative_z_scores += n.z_score
+            # Getting what proportion each network with a negative z scores makes of the sum of the negative z scores
+            parents = []
+            for n in self.networks:
+                if n.z_score < 0:
+                    n.parent_chance = n.z_score / sum_of_negative_z_scores
+                    parents.append(n)  # Adds the network to the list of parents
+                else:  # All networks after the first network with a non-negative z score will be non-negative
+                    break
 
-        # Getting what proportion each network with a negative z scores makes of the sum of the negative z scores
-        parents = []
-        for n in self.networks:
-            if n.z_score < 0:
-                n.parent_chance = n.z_score / sum_of_negative_z_scores
-                parents.append(n)  # Adds the network to the list of parents
-            else:  # All networks after the first network with a non-negative z score will be non-negative
-                break
+            # Creating the new generation as a blank slate
+            # This may be slow
+            new_networks = []
+            for p in range(self.pop_size):  # Creating first generation of networks
+                new_networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
 
-        # Creating the new generation as a blank slate
-        # This may be slow
-        new_networks = []
-        for p in range(self.pop_size):  # Creating first generation of networks
-            new_networks.append(Network(self.shape, self.use_sigmoid, self.add_bias_nodes, self.window_size, self.set_all_zero))
+            for p in range(len(new_networks)):  # Choosing the parents for each network from the previous networks
+                p1, p2 = random.choices(parents, [p.parent_chance for p in parents], k=2)
+                # It is possible for identical parents to occur
 
-        for p in range(len(new_networks)):
-            p1, p2 = random.choices(parents, [p.parent_chance for p in parents], k=2)
-            # It is possible for identical parents to occur
+                new_networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
+                new_networks[p] = self._mutate(new_networks[p])  # Mutates the child based on the change rate
 
-            new_networks[p] = self._crossover(p1, p2)  # Crosses the parents to produce a child
-            new_networks[p] = self._mutate(new_networks[p])  # Mutates the child based on the change rate
-
-        # Sets the weights of the old networks to that of the corresponding new network
-        for i in range(1, len(self.networks)):  # The best network is left unchanged
-            self.networks[i].set_weights(new_networks[i].show())
+            # Sets the weights of the old networks to that of the corresponding new network
+            for i in range(1, len(self.networks)):  # The best network is left unchanged
+                self.networks[i].set_weights(new_networks[i].show())
 
     def train(self, epochs, print_progress=True, print_population_losses=False):
         self.gens_since_change_change_rate += 1
@@ -270,18 +282,21 @@ class Species:
 
             self.all_lowest_losses.append(self.networks[0].loss)
             if print_progress:
-                print("\n", self.epochs, ":", "loss:", self.networks[0].loss, "Weights:", self.networks[0].show())
-            if len(self.all_lowest_losses) > 4 and self.can_change_change_rate and self.gens_since_change_change_rate > 4:  # We must be at least 4 generations in
-                if self.all_lowest_losses[self.epochs - 4] == self.all_lowest_losses[self.epochs]:  # No change
-                    self.change_rate /= 2
-                    if print_progress:
-                        print("--\nNo change from 4 gens ago so change_rate is being lowered to", self.change_rate, "\n--")
-                        self.gens_since_change_change_rate = 0
+                print(Fore.BLUE + "\n" + str(self.epochs), Fore.RED + ":", "loss:", self.networks[0].loss, "| Weights:", self.networks[0].show())
+            if self.can_change_change_rate:
+                if len(self.all_lowest_losses) > self.no_changes_till_change_change_rate:
+                    if self.gens_since_change_change_rate > self.no_changes_till_change_change_rate:  # We must be at least so many generations in
+                        if self.all_lowest_losses[self.epochs - self.no_changes_till_change_change_rate] == self.all_lowest_losses[self.epochs]:  # No change
+                            self.change_rate /= 2
+                            if print_progress:
+                                print(Fore.YELLOW + "--\nNo change from " + str(self.no_changes_till_change_change_rate) + " gens ago so change_rate is being lowered to", self.change_rate, "\n--")
+                                self.gens_since_change_change_rate = 0
 
             if print_population_losses:
                 all_losses = [a.loss for a in self.networks]
                 self.mean_loss = sum(all_losses) / len(all_losses)
                 self.median_loss = all_losses[len(all_losses) // 2]
+                print(Fore.GREEN + "All Losses:  ", all_losses)
                 print("Mean Loss:   ", self.mean_loss)
                 print("Median Loss: ", self.median_loss)
             self.epochs += 1
